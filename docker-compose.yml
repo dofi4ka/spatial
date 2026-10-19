@@ -1,0 +1,18 @@
+# Local build. For deploying the published image see the README.
+services:
+  spatial:
+    build: .
+    container_name: spatial
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      # public URL, e.g. https://spatial.example.com (optional behind a proxy that sends X-Forwarded-*)
+      ORIGIN: ${ORIGIN:-}
+    volumes:
+      - spatial-data:/data
+
+volumes:
+  spatial-data:
