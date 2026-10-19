@@ -1,4 +1,5 @@
 import { replacePageMentions, splitMentions, type Resolve } from './mentions.ts';
+import { isVisual } from './drawing.ts';
 
 // Page model: a tree of elements. Each element has an HTML tag, a natural-language prompt,
 // optional literal text, and an auto-layout (flex/grid) describing how its children are arranged.
@@ -199,7 +200,7 @@ function linkAttr(tag: string, raw: string, resolve?: Resolve) {
 		if (seg.t !== 'mention') continue;
 		const r = resolve(seg.id);
 		if (!r) continue;
-		if (tag === 'img' && r.type !== 'image') continue;
+		if (tag === 'img' && !isVisual(r.type)) continue;
 		return ` ${tag === 'a' ? 'href' : 'src'}="${escAttr(r.path)}"`;
 	}
 	return '';

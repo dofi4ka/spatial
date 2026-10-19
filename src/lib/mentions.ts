@@ -7,6 +7,7 @@
 // mentioned file inside the zip. Images uploaded straight into a markdown document
 // (/uploads/xyz.png) are exported next to the .md as "<doc>.image-N.png".
 import type { Item, ItemType } from './types.ts';
+import { drawingPng } from './drawing.ts';
 
 // A fragment-style marker: editors and sanitizers treat it as a harmless relative link.
 export const SCHEME = '#spatial:';
@@ -95,7 +96,9 @@ export function planExport(items: Item[], rootId: string): ExportPlan {
 					});
 				}
 			} else if (it.type === 'page') plan.paths.set(it.id, unique(base.replace(/\.html?$/i, ''), '.html'));
-			else if (it.type === 'image' && it.content)
+			else if (it.type === 'drawing') {
+				if (drawingPng(it.content)) plan.paths.set(it.id, unique(base.replace(/\.(png|excalidraw)$/i, ''), '.png'));
+			} else if (it.type === 'image' && it.content)
 				plan.paths.set(it.id, unique(base.replace(/\.(png|jpe?g|gif|webp|svg|avif)$/i, ''), '.' + it.content.split('.').pop()));
 		}
 		for (const f of later) f();

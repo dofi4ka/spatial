@@ -3,6 +3,7 @@
 	import type { Item } from '#lib/types.ts';
 	import type { ProjectStore } from '#lib/store.svelte.ts';
 	import { icons } from '#lib/icons.ts';
+	import { visualSrc } from '#lib/drawing.ts';
 
 	let {
 		store,
@@ -20,7 +21,7 @@
 
 	onMount(() => input?.focus());
 
-	const order = { image: 0, markdown: 1, page: 2, canvas: 3 };
+	const order = { image: 0, drawing: 1, markdown: 2, page: 3, canvas: 4 };
 	let results = $derived.by(() => {
 		const s = q.trim().toLowerCase();
 		return Object.values(store.items)
@@ -52,7 +53,7 @@
 		} else if (e.key === 'Escape') (e.preventDefault(), onclose());
 	}
 
-	const accent: Record<string, string> = { canvas: 'text-indigo-500', markdown: 'text-sky-500', image: 'text-emerald-500', page: 'text-amber-500' };
+	const accent: Record<string, string> = { canvas: 'text-indigo-500', markdown: 'text-sky-500', image: 'text-emerald-500', page: 'text-amber-500', drawing: 'text-rose-500' };
 </script>
 
 <div class="fixed inset-0 z-50" role="presentation" onpointerdown={onclose}></div>
@@ -72,8 +73,8 @@
 				onmouseenter={() => (active = i)}
 				onclick={() => onpick(r.item)}
 			>
-				{#if r.item.type === 'image' && r.item.content}
-					<img src="/uploads/{r.item.content}" alt="" class="h-6 w-6 shrink-0 rounded object-cover" />
+				{#if visualSrc(r.item)}
+					<img src={visualSrc(r.item)} alt="" class="h-6 w-6 shrink-0 rounded object-cover" />
 				{:else}
 					<span class="grid h-6 w-6 shrink-0 place-items-center {accent[r.item.type]}">{@html icons[r.item.type]}</span>
 				{/if}

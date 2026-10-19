@@ -4,6 +4,7 @@
 	import { getContext } from 'svelte';
 	import type { Item } from '#lib/types.ts';
 	import { splitMentions } from '#lib/mentions.ts';
+	import { visualSrc } from '#lib/drawing.ts';
 	import MentionText from '../MentionText.svelte';
 	import Self from './NodeView.svelte';
 
@@ -16,8 +17,8 @@
 	let imgSrc = $derived.by(() => {
 		if (node.tag !== 'img') return '';
 		for (const s of splitMentions(node.text + '\n' + node.prompt)) {
-			const it = s.t === 'mention' ? items[s.id] : undefined;
-			if (it?.type === 'image' && it.content) return `/uploads/${it.content}`;
+			const src = s.t === 'mention' ? visualSrc(items[s.id]) : '';
+			if (src) return src;
 		}
 		return '';
 	});

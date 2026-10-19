@@ -1,6 +1,6 @@
 export type User = { id: string; email: string; name: string; is_admin: boolean };
 
-export type ItemType = 'canvas' | 'markdown' | 'image' | 'page';
+export type ItemType = 'canvas' | 'markdown' | 'image' | 'page' | 'drawing';
 
 export type Item = {
 	id: string;
@@ -12,7 +12,7 @@ export type Item = {
 	y: number;
 	w: number;
 	h: number;
-	/** markdown source, page JSON, or uploaded image filename */
+	/** markdown source, page JSON, Excalidraw scene JSON, or uploaded image filename */
 	content: string;
 	updated_at: number;
 	updated_by: string | null;

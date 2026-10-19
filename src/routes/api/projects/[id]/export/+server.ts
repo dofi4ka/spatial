@@ -5,6 +5,7 @@ import { ctx } from '#lib/server/api.ts';
 import { listItems, UPLOAD_DIR } from '#lib/server/db.ts';
 import { pageToHtml, parsePage } from '#lib/page.ts';
 import { exportMarkdown, planExport, resolverFor } from '#lib/mentions.ts';
+import { drawingPng } from '#lib/drawing.ts';
 
 const clean = (s: string) => s.replace(/[\\/:*?"<>|\x00-\x1f]+/g, '-').replace(/^\.+/, '').trim() || 'untitled';
 
@@ -31,7 +32,12 @@ export async function GET(event) {
 				if (data) root.file(assetPath, data);
 			}
 		} else if (it.type === 'page') root.file(path, pageToHtml(parsePage(it.content), it.name, resolverFor(plan, it.id)));
-		else if (it.type === 'image') {
+		else if (it.type === 'drawing') {
+			// rendered to PNG by the editor whenever the drawing changes
+			const png = drawingPng(it.content);
+			const data = png && upload(png);
+			if (data) root.file(path, data);
+		} else if (it.type === 'image') {
 			const data = upload(it.content);
 			if (data) root.file(path, data);
 		}

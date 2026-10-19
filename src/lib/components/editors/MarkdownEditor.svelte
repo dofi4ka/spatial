@@ -4,6 +4,7 @@
 	import type { ProjectStore } from '#lib/store.svelte.ts';
 	import { markdownMention, SCHEME } from '#lib/mentions.ts';
 	import { mentionSrc } from '#lib/markdown.ts';
+	import { isVisual } from '#lib/drawing.ts';
 	import MentionPicker from '../MentionPicker.svelte';
 
 	let { store, item, onopen }: { store: ProjectStore; item: Item; onopen?: (item: Item) => void } = $props();
@@ -124,7 +125,7 @@
 
 	function pick(it: Item) {
 		picker = null;
-		if (it.type === 'image') insertMarkdown?.(`\n${markdownMention(it.name, it.id, true)}\n`, false);
+		if (isVisual(it.type)) insertMarkdown?.(`\n${markdownMention(it.name, it.id, true)}\n`, false);
 		else insertLink?.(`@${it.name}`, `${SCHEME}${it.id}`);
 	}
 

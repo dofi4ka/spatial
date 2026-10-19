@@ -5,6 +5,7 @@
 	import type { Item } from '#lib/types.ts';
 	import type { ProjectStore } from '#lib/store.svelte.ts';
 	import { mentionToken, splitMentions } from '#lib/mentions.ts';
+	import { visualSrc } from '#lib/drawing.ts';
 	import type { PageEditorState } from './editor.svelte';
 	import MentionPicker from '../MentionPicker.svelte';
 
@@ -81,7 +82,7 @@
 				{#if m.t === 'mention'}
 					{@const it = store.items[m.id]}
 					<span class="mention {it ? '' : 'missing'} inline-flex items-center gap-1 text-[11px]">
-						{#if it?.type === 'image' && it.content}<img src="/uploads/{it.content}" alt="" class="h-3.5 w-3.5 rounded-sm object-cover" />{/if}
+						{#if visualSrc(it)}<img src={visualSrc(it)} alt="" class="h-3.5 w-3.5 rounded-sm object-cover" />{/if}
 						<button class="hover:underline" title={it ? 'Open' : 'This file was deleted'} onclick={() => it && onopen?.(it)}>@{it?.name ?? m.name}</button>
 						<button class="opacity-50 hover:opacity-100" title="Remove mention" onclick={() => removeMention(field, m.id)}>×</button>
 					</span>

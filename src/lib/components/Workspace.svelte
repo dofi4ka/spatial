@@ -9,6 +9,7 @@
 	import MarkdownEditor from './editors/MarkdownEditor.svelte';
 	import ImageEditor from './editors/ImageEditor.svelte';
 	import PageEditor from './editors/PageEditor.svelte';
+	import DrawingEditor from './editors/DrawingEditor.svelte';
 
 	let { project, items, user }: { project: Project; items: Item[]; user: User } = $props();
 
@@ -86,7 +87,7 @@
 		}
 	});
 
-	const typeLabel = { markdown: 'Markdown', image: 'Image', page: 'Page', canvas: 'Canvas' };
+	const typeLabel = { markdown: 'Markdown', image: 'Image', page: 'Page', canvas: 'Canvas', drawing: 'Drawing' };
 </script>
 
 <svelte:head><title>{file ? `${file.name} · ` : ''}{project.name} · Spatial</title></svelte:head>
@@ -152,6 +153,7 @@
 				<div class="absolute inset-0 z-20 bg-white">
 					{#if file.type === 'markdown'}<MarkdownEditor {store} item={file} onopen={open} />
 					{:else if file.type === 'image'}<ImageEditor {store} item={file} />
+					{:else if file.type === 'drawing'}<DrawingEditor {store} item={file} />
 					{:else if file.type === 'page'}<PageEditor {store} item={file} onopen={open} />{/if}
 				</div>
 			{/key}

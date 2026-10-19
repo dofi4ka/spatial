@@ -8,6 +8,7 @@ export type RemoteChange = { id: string; by: string; at: number };
 export const DEFAULT_SIZE: Record<ItemType, [number, number]> = {
 	canvas: [360, 260],
 	markdown: [320, 380],
+	drawing: [400, 300],
 	image: [320, 240],
 	page: [400, 300]
 };
@@ -138,7 +139,7 @@ export class ProjectStore {
 			project_id: this.project.id,
 			parent_id: parentId,
 			type,
-			name: { canvas: 'New canvas', markdown: 'Untitled.md', image: 'Image', page: 'New page' }[type],
+			name: { canvas: 'New canvas', markdown: 'Untitled.md', image: 'Image', page: 'New page', drawing: 'New drawing' }[type],
 			x: Math.round(x - (extra.w ?? w) / 2),
 			y: Math.round(y - (extra.h ?? h) / 2),
 			w,

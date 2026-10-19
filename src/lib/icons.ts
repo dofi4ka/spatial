@@ -4,6 +4,7 @@ const p = (d: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentCo
 export const icons = {
 	canvas: p('<rect x="3" y="3" width="18" height="18" rx="3"/><rect x="7" y="7" width="4" height="4" rx="1"/><rect x="13" y="12" width="4" height="5" rx="1"/>'),
 	markdown: p('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>'),
+	drawing: p('<path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/>'),
 	image: p('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>'),
 	page: p('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M8 8v13"/>'),
 	plus: p('<path d="M12 5v14M5 12h14"/>'),

@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
+    "dev": "node scripts/excalidraw-assets.js && vite dev",
+    "build": "node scripts/excalidraw-assets.js && vite build",
     "preview": "vite preview",
     "start": "node build",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
@@ -16,6 +16,8 @@
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "svelte": "^5.57.2",
     "svelte-check": "^4.7.7",
     "tailwindcss": "^4.3.3",
@@ -23,12 +25,15 @@
     "vite": "^8.3.4"
   },
   "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.1",
     "@milkdown/crepe": "^7.22.3",
     "@milkdown/kit": "^7.22.3",
     "dompurify": "^3.4.17",
     "jszip": "^3.10.2",
     "marked": "^18.1.1",
-    "nanoid": "^6.0.2"
+    "nanoid": "^6.0.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "imports": {
     "#lib": "./src/lib",

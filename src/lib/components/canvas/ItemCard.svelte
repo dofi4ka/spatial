@@ -3,6 +3,7 @@
 	import type { ProjectStore } from '#lib/store.svelte.ts';
 	import { icons } from '#lib/icons.ts';
 	import { renderMarkdown } from '#lib/markdown.ts';
+	import { visualSrc } from '#lib/drawing.ts';
 	import PagePreview from './PagePreview.svelte';
 	import FolderPreview from './FolderPreview.svelte';
 
@@ -26,7 +27,7 @@
 		onrename: (name: string | null) => void;
 	} = $props();
 
-	const accent: Record<string, string> = { canvas: 'text-indigo-500', markdown: 'text-sky-500', image: 'text-emerald-500', page: 'text-amber-500' };
+	const accent: Record<string, string> = { canvas: 'text-indigo-500', markdown: 'text-sky-500', image: 'text-emerald-500', page: 'text-amber-500', drawing: 'text-rose-500' };
 	let labelScale = $derived(Math.min(4, 1 / zoom));
 </script>
 
@@ -80,6 +81,13 @@
 				<img src="/uploads/{item.content}" alt={item.name} class="h-full w-full object-contain" draggable="false" loading="lazy" />
 			{:else}
 				<div class="grid h-full place-items-center text-xs text-zinc-400">No image</div>
+			{/if}
+		{:else if item.type === 'drawing'}
+			{@const src = visualSrc(item)}
+			{#if src}
+				<img {src} alt={item.name} class="h-full w-full object-contain p-2" draggable="false" loading="lazy" />
+			{:else}
+				<div class="grid h-full place-items-center text-xs text-zinc-400">Empty drawing</div>
 			{/if}
 		{:else if item.type === 'page'}
 			<PagePreview content={item.content} width={item.w} />

@@ -338,6 +338,7 @@
 		else if (!mod && !e.shiftKey && !e.altKey && e.key === 'c') (e.preventDefault(), create('canvas'));
 		else if (!mod && !e.shiftKey && !e.altKey && e.key === 'm') (e.preventDefault(), create('markdown'));
 		else if (!mod && !e.shiftKey && !e.altKey && e.key === 'p') (e.preventDefault(), create('page'));
+		else if (!mod && !e.shiftKey && !e.altKey && e.key === 'd') (e.preventDefault(), create('drawing'));
 		else if (!mod && !e.shiftKey && !e.altKey && e.key === 'i') (e.preventDefault(), create('image'));
 	}
 
@@ -440,7 +441,7 @@
 
 	<!-- toolbar -->
 	<div data-ui class="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
-		{#each [['canvas', 'Canvas', 'C'], ['markdown', 'Markdown', 'M'], ['page', 'Page', 'P'], ['image', 'Image', 'I']] as [t, label, key]}
+		{#each [['canvas', 'Canvas', 'C'], ['markdown', 'Markdown', 'M'], ['page', 'Page', 'P'], ['drawing', 'Drawing', 'D'], ['image', 'Image', 'I']] as [t, label, key]}
 			<button class="btn-ghost h-9 px-3" title="New {label.toLowerCase()} ({key})" onclick={() => create(t as ItemType)}>
 				<span class="text-base">{@html icons[t as ItemType]}</span>{label}
 			</button>
@@ -458,7 +459,7 @@
 		<div
 			data-ui
 			class="absolute z-20 min-w-44 rounded-xl border border-zinc-200 bg-white p-1 text-sm shadow-xl"
-			style="left:{Math.min(menu.sx, vw - 190)}px;top:{Math.min(menu.sy, vh - 220)}px"
+			style="left:{Math.min(menu.sx, vw - 190)}px;top:{Math.min(menu.sy, vh - 250)}px"
 		>
 			{#if menu.item}
 				{@const it = menu.item}
@@ -476,6 +477,7 @@
 				<button class="menu-item" onclick={() => create('canvas', at)}><span>{@html icons.canvas} Canvas</span><span class="kbd">C</span></button>
 				<button class="menu-item" onclick={() => create('markdown', at)}><span>{@html icons.markdown} Markdown</span><span class="kbd">M</span></button>
 				<button class="menu-item" onclick={() => create('page', at)}><span>{@html icons.page} Page</span><span class="kbd">P</span></button>
+				<button class="menu-item" onclick={() => create('drawing', at)}><span>{@html icons.drawing} Drawing</span><span class="kbd">D</span></button>
 				<button class="menu-item" onclick={() => create('image', at)}><span>{@html icons.image} Image</span><span class="kbd">I</span></button>
 			{/if}
 		</div>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ProjectStore } from '#lib/store.svelte.ts';
 	import { icons } from '#lib/icons.ts';
+	import { visualSrc } from '#lib/drawing.ts';
 
 	let { store, id, width, height }: { store: ProjectStore; id: string; width: number; height: number } = $props();
 
@@ -18,7 +19,7 @@
 		const oy = (height - (y1 - y0) * s) / 2 - y0 * s;
 		return { s, ox, oy };
 	});
-	const tint: Record<string, string> = { canvas: '#eef2ff', markdown: '#fff', page: '#fff', image: '#f4f4f5' };
+	const tint: Record<string, string> = { canvas: '#eef2ff', markdown: '#fff', page: '#fff', image: '#f4f4f5', drawing: '#fff' };
 </script>
 
 <div class="relative h-full w-full overflow-hidden bg-[radial-gradient(#e4e4e7_1px,transparent_1px)] [background-size:10px_10px]">
@@ -30,8 +31,8 @@
 				class="absolute overflow-hidden rounded-[3px] border border-zinc-300 shadow-sm"
 				style="left:{view.ox + k.x * view.s}px;top:{view.oy + k.y * view.s}px;width:{k.w * view.s}px;height:{k.h * view.s}px;background:{tint[k.type]}"
 			>
-				{#if k.type === 'image' && k.content}
-					<img src="/uploads/{k.content}" alt="" class="h-full w-full object-cover" loading="lazy" draggable="false" />
+				{#if visualSrc(k)}
+					<img src={visualSrc(k)} alt="" class="h-full w-full {k.type === 'image' ? 'object-cover' : 'object-contain'}" loading="lazy" draggable="false" />
 				{:else if k.w * view.s > 40}
 					<div class="flex items-center gap-1 p-1 text-[9px] leading-tight text-zinc-500">
 						<span class="shrink-0">{@html icons[k.type]}</span><span class="truncate">{k.name}</span>

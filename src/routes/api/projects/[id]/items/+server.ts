@@ -5,7 +5,7 @@ import { deleteItems, getItem, insertItem, subtreeIds, updateItem, type ItemPatc
 import { broadcast } from '#lib/server/hub.ts';
 import type { Item, ItemType } from '#lib/types.ts';
 
-const TYPES: ItemType[] = ['canvas', 'markdown', 'image', 'page'];
+const TYPES: ItemType[] = ['canvas', 'markdown', 'image', 'page', 'drawing'];
 
 function assertCanvas(projectId: string, id: string | null | undefined) {
 	const parent = id ? getItem(id) : undefined;
