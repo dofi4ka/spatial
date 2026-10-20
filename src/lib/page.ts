@@ -2,23 +2,36 @@ import { replacePageMentions, splitMentions, type Resolve } from './mentions.ts'
 import { isVisual } from './drawing.ts';
 
 // Page model: a tree of elements. Each element has an HTML tag, a natural-language prompt,
-// optional literal text, and an auto-layout (flex/grid) describing how its children are arranged.
+// optional literal text, and a Figma-style auto layout describing how its children are arranged.
+// Spacing values are in px.
 
-export type Dir = 'col' | 'row' | 'grid';
+/** none = no auto layout (children simply stack as blocks) */
+export type Dir = 'none' | 'col' | 'row' | 'grid';
 export type Align = 'start' | 'center' | 'end' | 'stretch';
 export type Justify = 'start' | 'center' | 'end' | 'between' | 'around';
-export type Size = 'auto' | 'hug' | 'fill';
+/** auto = CSS default, hug = fit content, fill = take remaining space, fixed = wv/hv px */
+export type Size = 'auto' | 'hug' | 'fill' | 'fixed';
 
 export type Layout = {
+	v: 2;
 	dir: Dir;
 	wrap: boolean;
 	cols: number;
 	gap: number;
-	pad: number;
+	/** padding top / right / bottom / left */
+	pt: number;
+	pr: number;
+	pb: number;
+	pl: number;
+	/** cross-axis alignment of children */
 	align: Align;
+	/** main-axis distribution; "between" is Figma's "Auto" gap */
 	justify: Justify;
 	w: Size;
 	h: Size;
+	wv: number;
+	hv: number;
+	clip: boolean;
 };
 
 export type PageNode = {
@@ -30,23 +43,41 @@ export type PageNode = {
 	children: PageNode[];
 };
 
-export const SPACING = [0, 1, 2, 3, 4, 6, 8, 12, 16, 24];
-
 export const defaultLayout = (): Layout => ({
+	v: 2,
 	dir: 'col',
 	wrap: false,
 	cols: 2,
-	gap: 2,
-	pad: 0,
+	gap: 8,
+	pt: 0,
+	pr: 0,
+	pb: 0,
+	pl: 0,
 	align: 'stretch',
 	justify: 'start',
 	w: 'auto',
-	h: 'auto'
+	h: 'auto',
+	wv: 320,
+	hv: 200,
+	clip: false
 });
+
+/** Older layouts (and the component library) use Tailwind spacing units and a single `pad`. */
+export type LegacyLayout = Partial<Omit<Layout, 'v'>> & { pad?: number; v?: number };
+
+export function upgradeLayout(l: LegacyLayout | undefined): Layout {
+	const base = defaultLayout();
+	if (!l) return base;
+	if (l.v === 2) return { ...base, ...(l as Layout) };
+	const { pad = 0, gap, v: _v, ...rest } = l;
+	return { ...base, ...rest, gap: gap === undefined ? base.gap : gap * 4, pt: pad * 4, pr: pad * 4, pb: pad * 4, pl: pad * 4, v: 2 };
+}
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
-export function makeNode(partial: Partial<Omit<PageNode, 'layout' | 'children'>> & { layout?: Partial<Layout>; children?: PageNode[] } = {}): PageNode {
+export function makeNode(
+	partial: Partial<Omit<PageNode, 'layout' | 'children'>> & { layout?: Partial<Layout>; children?: PageNode[] } = {}
+): PageNode {
 	return {
 		id: uid(),
 		tag: partial.tag ?? 'div',
@@ -71,13 +102,13 @@ export function parsePage(content: string): PageNode {
 	return emptyPage();
 }
 
-function normalize(n: Partial<PageNode>): PageNode {
+function normalize(n: Partial<Omit<PageNode, 'layout'>> & { layout?: LegacyLayout }): PageNode {
 	return {
 		id: n.id || uid(),
 		tag: n.tag || 'div',
 		prompt: n.prompt ?? '',
 		text: n.text ?? '',
-		layout: { ...defaultLayout(), ...n.layout },
+		layout: upgradeLayout(n.layout),
 		children: (n.children ?? []).map(normalize)
 	};
 }
@@ -129,31 +160,53 @@ const JUSTIFY_TW: Record<Justify, string> = {
 export function twClasses(n: PageNode, parentDir: Dir | null): string {
 	const l = n.layout;
 	const cls: string[] = [];
-	if (n.children.length) {
+	if (n.children.length && l.dir !== 'none') {
 		if (l.dir === 'grid') cls.push('grid', `grid-cols-${l.cols}`);
 		else cls.push('flex', l.dir === 'row' ? 'flex-row' : 'flex-col');
 		if (l.wrap && l.dir !== 'grid') cls.push('flex-wrap');
-		if (l.gap) cls.push(`gap-${l.gap}`);
+		if (l.gap && l.justify !== 'between') cls.push(tw('gap', l.gap));
 		if (l.align !== 'stretch') cls.push(ALIGN_TW[l.align]);
 		if (l.justify !== 'start') cls.push(JUSTIFY_TW[l.justify]);
 	}
-	if (l.pad) cls.push(`p-${l.pad}`);
-	if (l.w === 'fill') cls.push(parentDir === 'row' ? 'flex-1' : 'w-full');
-	if (l.w === 'hug') cls.push('w-fit');
-	if (l.h === 'fill') cls.push(parentDir === 'col' ? 'flex-1' : 'h-full');
-	if (l.h === 'hug') cls.push('h-fit');
+	cls.push(...paddingClasses(l));
+	cls.push(...sizeClasses('w', l.w, l.wv, parentDir === 'row'));
+	cls.push(...sizeClasses('h', l.h, l.hv, parentDir === 'col'));
+	if (l.clip) cls.push('overflow-hidden');
 	return cls.join(' ');
 }
 
-/** Inline CSS equivalent of the tailwind classes, for in-app rendering. */
-export function layoutStyle(n: PageNode, scale = 4): string {
+/** Tailwind spacing token for a px value: 16 → "p-4", 10 → "p-2.5", 13 → "p-[13px]". */
+function tw(prefix: string, px: number) {
+	const u = px / 4;
+	return Number.isInteger(u) || Number.isInteger(u * 2) ? `${prefix}-${u}` : `${prefix}-[${px}px]`;
+}
+
+function paddingClasses(l: Layout): string[] {
+	const { pt, pr, pb, pl } = l;
+	if (pt === pr && pr === pb && pb === pl) return pt ? [tw('p', pt)] : [];
+	if (pt === pb && pl === pr) return [pl && tw('px', pl), pt && tw('py', pt)].filter(Boolean) as string[];
+	return [pt && tw('pt', pt), pr && tw('pr', pr), pb && tw('pb', pb), pl && tw('pl', pl)].filter(Boolean) as string[];
+}
+
+function sizeClasses(axis: 'w' | 'h', s: Size, v: number, mainAxis: boolean): string[] {
+	if (s === 'fill') return [mainAxis ? 'flex-1' : `${axis}-full`];
+	if (s === 'hug') return [`${axis}-fit`];
+	if (s === 'fixed') return [`${axis}-[${v}px]`, ...(mainAxis ? ['shrink-0'] : [])];
+	return [];
+}
+
+const pad = (l: Layout) => `${l.pt}px ${l.pr}px ${l.pb}px ${l.pl}px`;
+
+/** Inline CSS for the children container in the editor (mirrors the Tailwind classes). */
+export function layoutStyle(n: PageNode): string {
 	const l = n.layout;
-	const s: string[] = [];
+	const s: string[] = [`padding:${pad(l)}`];
+	if (l.clip) s.push('overflow:hidden');
+	if (l.dir === 'none') return [...s, 'display:flex', 'flex-direction:column', 'gap:0'].join(';');
 	if (l.dir === 'grid') s.push('display:grid', `grid-template-columns:repeat(${l.cols},minmax(0,1fr))`);
 	else s.push('display:flex', `flex-direction:${l.dir === 'row' ? 'row' : 'column'}`);
 	if (l.wrap && l.dir !== 'grid') s.push('flex-wrap:wrap');
-	s.push(`gap:${l.gap * scale}px`);
-	if (l.pad) s.push(`padding:${l.pad * scale}px`);
+	s.push(`gap:${l.justify === 'between' ? 0 : l.gap}px`);
 	const ai = { start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch' }[l.align];
 	const jc = { start: 'flex-start', center: 'center', end: 'flex-end', between: 'space-between', around: 'space-around' }[l.justify];
 	s.push(`align-items:${ai}`, `justify-content:${jc}`);
@@ -163,10 +216,13 @@ export function layoutStyle(n: PageNode, scale = 4): string {
 export function sizeStyle(n: PageNode, parentDir: Dir | null): string {
 	const l = n.layout;
 	const s: string[] = ['min-width:0'];
-	if (l.w === 'fill') s.push(parentDir === 'row' ? 'flex:1 1 0' : 'width:100%');
-	if (l.w === 'hug') s.push('width:fit-content');
-	if (l.h === 'fill') s.push(parentDir === 'col' ? 'flex:1 1 0' : 'height:100%');
-	if (l.h === 'hug') s.push('height:fit-content');
+	const size = (axis: 'width' | 'height', v: Size, px: number, main: boolean) => {
+		if (v === 'fill') s.push(main ? 'flex:1 1 0' : `${axis}:100%`);
+		if (v === 'hug') s.push(`${axis}:fit-content`);
+		if (v === 'fixed') s.push(`${axis}:${px}px`, ...(main ? ['flex-shrink:0'] : []));
+	};
+	size('width', l.w, l.wv, parentDir === 'row');
+	size('height', l.h, l.hv, parentDir === 'col');
 	return s.join(';');
 }
 

@@ -1,23 +1,24 @@
 // Component library for the page builder. Every component is just a starting element:
 // tag + brief prompt (+ optional text, layout and children). `v` is a tiny HTML preview
 // built from the .pv-* primitives defined in ComponentLibrary.svelte.
-import { makeNode, type Layout, type PageNode } from './page';
+import { makeNode, upgradeLayout, type LegacyLayout, type PageNode } from './page';
 
 export type Def = {
 	n: string;
 	t?: string;
 	p?: string;
 	x?: string;
-	l?: Partial<Layout>;
+	/** legacy units: gap/pad in Tailwind steps (×4px) */
+	l?: LegacyLayout;
 	c?: Def[];
 	v: string;
 };
 export type Group = { name: string; items: Def[] };
 
-const row: Partial<Layout> = { dir: 'row', align: 'center', gap: 2 };
-const rowB: Partial<Layout> = { dir: 'row', align: 'center', justify: 'between', gap: 4 };
-const col = (gap = 2, pad = 0): Partial<Layout> => ({ dir: 'col', gap, pad });
-const grid = (cols: number, gap = 4): Partial<Layout> => ({ dir: 'grid', cols, gap });
+const row: LegacyLayout = { dir: 'row', align: 'center', gap: 2 };
+const rowB: LegacyLayout = { dir: 'row', align: 'center', justify: 'between', gap: 4 };
+const col = (gap = 2, pad = 0): LegacyLayout => ({ dir: 'col', gap, pad });
+const grid = (cols: number, gap = 4): LegacyLayout => ({ dir: 'grid', cols, gap });
 
 // preview snippets
 const B = (t = 'Button', k = 'b') => `<i class="pv-${k}">${t}</i>`;
@@ -330,7 +331,7 @@ export function defToNode(d: Def): PageNode {
 		tag: d.t ?? 'div',
 		prompt: d.p ?? '',
 		text: d.x ?? '',
-		layout: d.l,
+		layout: upgradeLayout(d.l),
 		children: (d.c ?? []).map(defToNode)
 	});
 }

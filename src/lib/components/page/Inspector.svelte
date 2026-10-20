@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { findParent, SPACING, type Layout } from '#lib/page.ts';
+	import { findParent, type Layout } from '#lib/page.ts';
+	import AutoLayoutPanel from './AutoLayoutPanel.svelte';
 	import { icons } from '#lib/icons.ts';
 	import { tick } from 'svelte';
 	import type { Item } from '#lib/types.ts';
@@ -67,10 +68,10 @@
 		if (!n) return;
 		ed.mutate(() => (n[k] = v), `${n.id}:${k}`);
 	}
-	function setL<K extends keyof Layout>(k: K, v: Layout[K]) {
+	function setLayout(patch: Partial<Layout>, key?: string) {
 		const n = node;
 		if (!n) return;
-		ed.mutate(() => (n.layout[k] = v));
+		ed.mutate(() => Object.assign(n.layout, patch), key ? `${n.id}:${key}` : '');
 	}
 </script>
 
@@ -175,68 +176,9 @@
 			</div>
 		{/if}
 
-		<div class="flex flex-col gap-2.5 border-t border-zinc-100 pt-3">
-			<div class="flex items-center justify-between">
-				<span class="label mb-0">Auto layout <span class="normal-case">(children)</span></span>
-				{#if !isRoot}<button class="text-[11px] text-indigo-600 hover:underline" onclick={() => ed.addChild(node.id)}>+ Add child</button>{/if}
-			</div>
-			<div class="seg">
-				<button class:on={l.dir === 'col'} onclick={() => setL('dir', 'col')} title="Vertical stack">↓ Column</button>
-				<button class:on={l.dir === 'row'} onclick={() => setL('dir', 'row')} title="Horizontal stack">→ Row</button>
-				<button class:on={l.dir === 'grid'} onclick={() => setL('dir', 'grid')} title="Grid">▦ Grid</button>
-			</div>
-			{#if l.dir === 'grid'}
-				<label class="flex items-center justify-between gap-2 text-xs text-zinc-600">
-					Columns
-					<div class="seg w-40">
-						{#each [1, 2, 3, 4, 5, 6] as n}<button class:on={l.cols === n} onclick={() => setL('cols', n)}>{n}</button>{/each}
-					</div>
-				</label>
-			{:else}
-				<label class="flex items-center gap-2 text-xs text-zinc-600">
-					<input type="checkbox" checked={l.wrap} onchange={(e) => setL('wrap', e.currentTarget.checked)} /> Wrap children
-				</label>
-			{/if}
-			<div class="grid grid-cols-2 gap-2">
-				<label class="text-xs text-zinc-600">
-					Gap
-					<select class="field-sm mt-0.5" value={l.gap} onchange={(e) => setL('gap', +e.currentTarget.value)}>
-						{#each SPACING as s}<option value={s}>{s} · {s * 4}px</option>{/each}
-					</select>
-				</label>
-				<label class="text-xs text-zinc-600">
-					Padding
-					<select class="field-sm mt-0.5" value={l.pad} onchange={(e) => setL('pad', +e.currentTarget.value)}>
-						{#each SPACING as s}<option value={s}>{s} · {s * 4}px</option>{/each}
-					</select>
-				</label>
-			</div>
-			<div>
-				<span class="mb-0.5 block text-xs text-zinc-600">Align (cross axis)</span>
-				<div class="seg">
-					{#each ['start', 'center', 'end', 'stretch'] as const as a}<button class:on={l.align === a} onclick={() => setL('align', a)}>{a}</button>{/each}
-				</div>
-			</div>
-			<div>
-				<span class="mb-0.5 block text-xs text-zinc-600">Justify (main axis)</span>
-				<div class="seg">
-					{#each ['start', 'center', 'end', 'between', 'around'] as const as j}<button class:on={l.justify === j} onclick={() => setL('justify', j)}>{j}</button>{/each}
-				</div>
-			</div>
-		</div>
-
 		{#if !isRoot}
-			<div class="flex flex-col gap-2.5 border-t border-zinc-100 pt-3">
-				<span class="label mb-0">Sizing (in parent)</span>
-				{#each [['w', 'Width'], ['h', 'Height']] as const as [k, label]}
-					<div class="flex items-center justify-between gap-2 text-xs text-zinc-600">
-						{label}
-						<div class="seg w-44">
-							{#each [['auto', 'Auto'], ['hug', 'Hug'], ['fill', 'Fill']] as const as [v, t]}<button class:on={l[k] === v} onclick={() => setL(k, v)}>{t}</button>{/each}
-						</div>
-					</div>
-				{/each}
-			</div>
+			<button class="self-start text-[11px] text-indigo-600 hover:underline" onclick={() => ed.addChild(node.id)}>+ Add child element</button>
 		{/if}
+		<AutoLayoutPanel {node} {isRoot} set={setLayout} />
 	</div>
 {/if}

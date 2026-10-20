@@ -154,10 +154,12 @@
 		cursor: default;
 		min-width: 0;
 	}
-	.nv.root { border: none; background: transparent; padding: 16px; min-height: 100%; border-radius: 0; }
-	.nv.hov { border-color: #a5b4fc; border-style: solid; }
-	.nv.sel { border-color: #6366f1; border-style: solid; box-shadow: 0 0 0 1px #6366f1; background: rgba(99, 102, 241, 0.06); }
-	.nv.target { border-color: #22c55e; border-style: solid; }
+	/* state highlights use outlines so they never change the layout */
+	.nv.root { border: 0; background: transparent; padding: 16px; min-height: 100%; border-radius: 0; }
+	.nv.hov { outline: 1px solid #a5b4fc; outline-offset: -1px; }
+	.nv.sel { outline: 2px solid #6366f1; outline-offset: -1px; background: rgba(99, 102, 241, 0.06); }
+	.nv.target { outline: 2px solid #22c55e; outline-offset: -1px; }
+	.nv.root.hov, .nv.root.sel, .nv.root.target { outline-offset: -2px; }
 	.nv-c { flex: 1; min-height: 8px; }
 	.root > .nv-c { min-height: 300px; }
 	.nv-c.empty { min-height: 28px; border-radius: 4px; background: rgba(34, 197, 94, 0.06); }

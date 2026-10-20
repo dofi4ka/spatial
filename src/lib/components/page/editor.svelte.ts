@@ -142,7 +142,7 @@ export class PageEditorState {
 		const node = findNode(this.root, id);
 		if (!parent || !node) return;
 		const i = parent.children.findIndex((c) => c.id === id);
-		const wrapper = makeNode({ tag: 'div', layout: { dir: parent.layout.dir === 'row' ? 'col' : 'row', gap: 2 } });
+		const wrapper = makeNode({ tag: 'div', layout: { dir: parent.layout.dir === 'row' ? 'col' : 'row', gap: 8 } });
 		this.mutate(() => {
 			const [n] = parent.children.splice(i, 1);
 			wrapper.children.push(n);

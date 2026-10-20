@@ -4,7 +4,7 @@
 
 	let { ed }: { ed: PageEditorState } = $props();
 	let closed = $state<Record<string, boolean>>({});
-	const dirIcon = { col: '↓', row: '→', grid: '▦' };
+	const dirIcon = { none: '·', col: '↓', row: '→', grid: '▦' };
 </script>
 
 {#snippet item(n: PageNode, depth: number)}
