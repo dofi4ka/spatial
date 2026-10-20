@@ -54,6 +54,13 @@
 	let promptEl = $state<HTMLTextAreaElement>();
 
 	$effect(() => {
+		if (ed.focusText && textEl) {
+			const el = textEl;
+			tick().then(() => (el.focus(), el.select()));
+		}
+	});
+
+	$effect(() => {
 		if (ed.focusPrompt && promptEl) {
 			promptEl.focus();
 			promptEl.select();

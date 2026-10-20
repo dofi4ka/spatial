@@ -57,7 +57,6 @@ export const LIBRARY: Group[] = [
 	{
 		name: 'Form inputs',
 		items: [
-			{ n: 'Text input', t: 'input', p: 'single-line text input', x: 'Placeholder', v: I('Placeholder') },
 			{ n: 'Labeled field', t: 'label', p: 'form field: label above input, helper text below', l: col(1), c: [{ n: '', t: 'span', x: 'Email', v: '' }, { n: '', t: 'input', x: 'you@example.com', v: '' }, { n: '', t: 'small', p: 'muted helper text', x: "We'll never share your email.", v: '' }], v: K(T('Email'), I('you@example.com'), L(60)) },
 			{ n: 'Password input', t: 'div', p: 'password input with eye toggle to show/hide value', l: row, c: [{ n: '', t: 'input', x: '••••••••', l: { w: 'fill' }, v: '' }, { n: '', t: 'button', p: 'ghost icon button: eye', v: '' }], v: I('•••••••• 👁') },
 			{ n: 'Search input', t: 'input', p: 'search field with magnifier icon on the left and ⌘K hint on the right', x: 'Search…', v: I('⌕ Search…') },
@@ -73,7 +72,6 @@ export const LIBRARY: Group[] = [
 			{ n: 'File dropzone', t: 'div', p: 'dashed drop zone for files: icon, “Drag files here or browse”, accepted types and max size', v: `<i class="pv-drop">⇪ Drop files or browse</i>` },
 			{ n: 'OTP code input', t: 'div', p: 'six single-digit boxes for a one-time code, auto-advance and paste support', l: row, v: R(...Array(6).fill(`<i class="pv-i pv-otp"></i>`)) },
 			{ n: 'Range slider', t: 'input', p: 'range slider with value bubble above thumb', v: `<i class="pv-sl"><i></i></i>` },
-			{ n: 'Dual range slider', t: 'div', p: 'two-thumb slider for a min/max price range, with numeric inputs below', v: `<i class="pv-sl pv-sl2"><i></i></i>` },
 			{ n: 'Star rating', t: 'div', p: 'interactive 5-star rating input, hover previews value', v: `<i class="pv-t" style="color:#f59e0b;font-size:13px">★★★★☆</i>` },
 			{ n: 'Phone input', t: 'div', p: 'phone number field with country flag + dial code dropdown', v: I('🇺🇸 +1 ▾ │ 555 0123') },
 			{ n: 'Inline editable text', t: 'span', p: 'text that turns into an input on click; Enter saves, Esc cancels', x: 'Click to rename', v: `<i class="pv-t" style="border-bottom:1px dashed #a1a1aa">Click to rename</i>` },
@@ -97,7 +95,7 @@ export const LIBRARY: Group[] = [
 	{
 		name: 'Navigation',
 		items: [
-			{ n: 'Navbar', t: 'nav', p: 'top navigation bar', l: { ...rowB, pad: 4 }, c: [{ n: '', t: 'a', p: 'logo', x: 'Acme', v: '' }, { n: '', t: 'ul', p: 'nav links', l: { dir: 'row', gap: 6 }, c: [{ n: '', t: 'li', x: 'Product', v: '' }, { n: '', t: 'li', x: 'Pricing', v: '' }, { n: '', t: 'li', x: 'Docs', v: '' }], v: '' }, { n: '', t: 'button', p: 'primary', x: 'Sign up', v: '' }], v: BX(R(`<b class="pv-t">Acme</b>`, '<i style="flex:1"></i>', L(14), L(14), L(14), B('Sign up'))) },
+			{ n: 'Navbar', t: 'nav', p: 'top navigation bar: logo left, links in the middle, primary action right; sticks to the top and gains a shadow on scroll', l: { ...rowB, pad: 4 }, c: [{ n: '', t: 'a', p: 'logo', x: 'Acme', v: '' }, { n: '', t: 'ul', p: 'nav links', l: { dir: 'row', gap: 6 }, c: [{ n: '', t: 'li', x: 'Product', v: '' }, { n: '', t: 'li', x: 'Pricing', v: '' }, { n: '', t: 'li', x: 'Docs', v: '' }], v: '' }, { n: '', t: 'button', p: 'primary', x: 'Sign up', v: '' }], v: BX(R(`<b class="pv-t">Acme</b>`, '<i style="flex:1"></i>', L(14), L(14), L(14), B('Sign up'))) },
 			{ n: 'Sidebar navigation', t: 'aside', p: 'vertical app sidebar: workspace switcher on top, grouped nav links with icons, user menu at the bottom', l: col(1, 3), v: BX(K(R(C(10), L(50)), R(IC, L(60)), `<i class="pv-r pv-act">${IC}${L(50)}</i>`, R(IC, L(55)))) },
 			{ n: 'Breadcrumbs', t: 'nav', p: 'breadcrumb trail separated by slashes; last item is current page', x: 'Home / Projects / Spatial', v: T('Home / Projects / <b>Spatial</b>') },
 			{ n: 'Tabs', t: 'div', p: 'horizontal tabs with underline on active tab, content panel below', l: col(4), c: [{ n: '', t: 'div', p: 'tab list', l: { dir: 'row', gap: 4 }, c: [{ n: '', t: 'button', p: 'active tab', x: 'Overview', v: '' }, { n: '', t: 'button', x: 'Activity', v: '' }, { n: '', t: 'button', x: 'Settings', v: '' }], v: '' }, { n: '', t: 'section', p: 'tab panel content', v: '' }], v: K(`<i class="pv-tabs"><i class="on">Overview</i><i>Activity</i><i>Settings</i></i>`, L(90), L(60)) },
@@ -118,20 +116,13 @@ export const LIBRARY: Group[] = [
 	{
 		name: 'Layout',
 		items: [
-			{ n: 'Section', t: 'section', p: '', l: col(6, 8), v: BX(H(50), L(80), L(70)) },
-			{ n: 'Container', t: 'div', p: 'centered max-width container', l: { ...col(4, 4), align: 'stretch' }, v: `<i class="pv-bx" style="margin:0 12px">${L(80)}${L(60)}</i>` },
-			{ n: 'Row', t: 'div', p: '', l: row, v: R(BX(L(80)), BX(L(80)), BX(L(80))) },
-			{ n: 'Column stack', t: 'div', p: '', l: col(2), v: K(BX(L(80)), BX(L(60))) },
 			{ n: 'Card', t: 'article', p: 'card with subtle border', l: col(3, 4), c: [{ n: '', t: 'h3', x: 'Card title', v: '' }, { n: '', t: 'p', p: 'one or two lines of supporting text', v: '' }], v: BX(H(50), L(90), L(70)) },
 			{ n: 'Two columns', t: 'div', p: 'two equal columns, stack on mobile', l: grid(2, 8), c: [{ n: '', t: 'div', v: '' }, { n: '', t: 'div', v: '' }], v: R(BX(L(80), L(60)), BX(L(70), L(80))) },
 			{ n: 'Three-up grid', t: 'div', p: 'responsive grid: 1 col mobile, 3 cols desktop', l: grid(3, 6), v: R(BX(SQ(16), L(70)), BX(SQ(16), L(60)), BX(SQ(16), L(80))) },
 			{ n: 'Sidebar layout', t: 'div', p: 'app shell: fixed-width sidebar on the left, scrollable main area', l: { dir: 'row', gap: 0, align: 'stretch' }, c: [{ n: '', t: 'aside', p: 'sidebar, 260px wide', v: '' }, { n: '', t: 'main', p: 'main content', l: { w: 'fill' }, v: '' }], v: R(`<i class="pv-bx" style="width:30%;height:40px"></i>`, `<i class="pv-bx" style="flex:1;height:40px"></i>`) },
 			{ n: 'Bento grid', t: 'div', p: 'bento-box grid with mixed tile sizes (one large 2x2 tile, several small)', l: grid(4, 4), v: `<i class="pv-bento"><i style="grid-row:span 2;grid-column:span 2"></i><i></i><i></i><i style="grid-column:span 2"></i></i>` },
 			{ n: 'Masonry', t: 'div', p: 'masonry columns of varying-height cards (Pinterest style)', l: grid(3, 3), v: R(K(SQ(22), SQ(12)), K(SQ(12), SQ(22)), K(SQ(18), SQ(16))) },
-			{ n: 'Divider', t: 'hr', p: 'thin horizontal rule', v: '<i class="pv-hr" style="margin:10px 0"></i>' },
 			{ n: 'Divider with label', t: 'div', p: 'horizontal line with centered text, e.g. “or continue with”', x: 'or', v: R('<i class="pv-hr" style="flex:1"></i>', T('or'), '<i class="pv-hr" style="flex:1"></i>') },
-			{ n: 'Spacer', t: 'div', p: 'empty vertical space', v: `<i class="pv-t" style="opacity:.5">↕ space</i>` },
-			{ n: 'Sticky header', t: 'header', p: 'header that sticks to top on scroll and gains a shadow/blur once scrolled', l: { ...rowB, pad: 3 }, v: BX(R(L(20), '<i style="flex:1"></i>', L(30))) },
 			{ n: 'Scroll area', t: 'div', p: 'fixed-height area with its own scrollbar and fade at the edges', v: `<i class="pv-bx" style="height:34px;overflow:hidden">${L(80)}${L(70)}${L(85)}${L(60)}</i>` },
 			{ n: 'Horizontal scroller', t: 'div', p: 'horizontally scrolling row of cards with snap points and arrow buttons', l: { dir: 'row', gap: 4 }, v: R(BX(SQ(18)), BX(SQ(18)), `<i class="pv-bx" style="opacity:.4">${SQ(18)}</i>`) }
 		]
@@ -139,22 +130,14 @@ export const LIBRARY: Group[] = [
 	{
 		name: 'Typography & content',
 		items: [
-			{ n: 'Heading 1', t: 'h1', x: 'Page title', v: `<b class="pv-t" style="font-size:14px">Page title</b>` },
-			{ n: 'Heading 2', t: 'h2', x: 'Section title', v: `<b class="pv-t" style="font-size:12px">Section title</b>` },
-			{ n: 'Paragraph', t: 'p', p: 'body copy', v: K(L(100), L(95), L(60)) },
 			{ n: 'Eyebrow + heading', t: 'hgroup', p: 'small uppercase eyebrow above a large heading and a subheading', l: col(2), c: [{ n: '', t: 'span', p: 'eyebrow', x: 'FEATURES', v: '' }, { n: '', t: 'h2', x: 'Everything you need', v: '' }, { n: '', t: 'p', p: 'one-sentence subheading', v: '' }], v: K(`<i class="pv-t" style="color:#6366f1;font-size:7px">FEATURES</i>`, H(80), L(60)) },
 			{ n: 'Gradient headline', t: 'h1', p: 'huge headline, key words with a gradient text fill', x: 'Build faster', v: `<b class="pv-t" style="font-size:15px;background:linear-gradient(90deg,#6366f1,#ec4899);-webkit-background-clip:text;color:transparent">Build faster</b>` },
 			{ n: 'Blockquote', t: 'blockquote', p: 'pull quote with attribution', v: `<i class="pv-k" style="border-left:2px solid #a1a1aa;padding-left:5px">${L(90)}${L(60)}${T('— Ada L.')}</i>` },
-			{ n: 'Bulleted list', t: 'ul', p: 'bulleted list', l: col(1), c: [{ n: '', t: 'li', x: 'First point', v: '' }, { n: '', t: 'li', x: 'Second point', v: '' }], v: K(R('•', L(60)), R('•', L(70)), R('•', L(50))) },
 			{ n: 'Check list', t: 'ul', p: 'list of benefits with check icons', l: col(2), v: K(R('<i class="pv-t" style="color:#22c55e">✓</i>', L(60)), R('<i class="pv-t" style="color:#22c55e">✓</i>', L(70))) },
 			{ n: 'Code block', t: 'pre', p: 'syntax-highlighted code block with language label and copy button', v: `<i class="pv-code">const a = 1;<br/>log(a);</i>` },
-			{ n: 'Keyboard shortcut', t: 'kbd', x: '⌘K', v: `<i class="pv-kbd">⌘</i><i class="pv-kbd">K</i>` },
 			{ n: 'Callout', t: 'aside', p: 'callout box with icon: info / warning / tip variants', l: { dir: 'row', gap: 3, pad: 4 }, v: `<i class="pv-bx" style="background:#eff6ff;border-color:#bfdbfe">${R('ℹ', L(80))}</i>` },
-			{ n: 'Definition list', t: 'dl', p: 'term / description pairs', l: grid(2, 2), v: K(R(L(30), L(50)), R(L(30), L(60))) },
-			{ n: 'Highlighted text', t: 'mark', p: 'marker-style highlight behind a phrase', x: 'important', v: `<i class="pv-t" style="background:#fef08a;padding:0 2px">important</i>` },
 			{ n: 'Prose article', t: 'article', p: 'long-form rich text article with comfortable reading width and typographic rhythm', l: col(3), v: K(H(70), L(100), L(95), L(100), L(40)) },
 			{ n: 'Accordion', t: 'div', p: 'accordion: stacked collapsible items, one open at a time, chevron rotates', l: col(0), c: [{ n: '', t: 'details', p: 'open', x: 'What is it?', v: '' }, { n: '', t: 'details', x: 'How does billing work?', v: '' }, { n: '', t: 'details', x: 'Can I cancel?', v: '' }], v: K(BX(R(L(60), '<i style="flex:1"></i>', T('▴')), L(80)), BX(R(L(50), '<i style="flex:1"></i>', T('▾'))), BX(R(L(40), '<i style="flex:1"></i>', T('▾')))) },
-			{ n: 'Collapsible', t: 'details', p: 'single disclosure: summary line toggles hidden content', x: 'Show more', v: K(T('▸ Show more')) },
 			{ n: 'Read more', t: 'p', p: 'truncated text (3 lines) with a “Read more” toggle that expands it', v: K(L(100), L(95), `<i class="pv-r">${L(40)}<i class="pv-a">Read more</i></i>`) }
 		]
 	},
@@ -164,7 +147,6 @@ export const LIBRARY: Group[] = [
 			{ n: 'Table', t: 'table', p: 'data table with header row, zebra rows, right-aligned numbers', v: `<i class="pv-tbl">${'<i></i>'.repeat(12)}</i>` },
 			{ n: 'Data grid', t: 'div', p: 'interactive table: sortable columns, row selection checkboxes, column filters, sticky header, pagination footer', v: K(R(I('⌕ Filter'), B('Columns ▾', 'bo')), `<i class="pv-tbl">${'<i></i>'.repeat(9)}</i>`) },
 			{ n: 'Stat card', t: 'div', p: 'KPI card: label, big number, trend delta (green up / red down)', l: col(1, 4), c: [{ n: '', t: 'span', x: 'Revenue', v: '' }, { n: '', t: 'strong', x: '$48,210', v: '' }, { n: '', t: 'span', p: 'positive trend', x: '+12.4%', v: '' }], v: BX(T('Revenue'), `<b class="pv-t" style="font-size:13px">$48.2k</b>`, `<i class="pv-t" style="color:#16a34a">▲ 12%</i>`) },
-			{ n: 'Stats row', t: 'div', p: 'row of 3-4 KPI stats separated by vertical dividers', l: grid(4, 0), v: R(K(L(60), H(40)), K(L(60), H(50)), K(L(60), H(30))) },
 			{ n: 'Key-value list', t: 'dl', p: 'description list of label/value rows, labels muted on the left', l: col(2), v: K(R(L(30), '<i style="flex:1"></i>', L(30)), R(L(25), '<i style="flex:1"></i>', L(40)), R(L(35), '<i style="flex:1"></i>', L(20))) },
 			{ n: 'Badge', t: 'span', p: 'small pill badge; variants: neutral / success / warning / danger', x: 'Active', v: R(BDG('Active'), `<i class="pv-bdg" style="background:#dcfce7;color:#166534">Paid</i>`, `<i class="pv-bdg" style="background:#fee2e2;color:#991b1b">Late</i>`) },
 			{ n: 'Status dot', t: 'span', p: 'colored dot + label (online / away / offline)', x: 'Operational', v: R('<i class="pv-dot" style="background:#22c55e"></i>', T('Operational')) },
@@ -186,8 +168,6 @@ export const LIBRARY: Group[] = [
 	{
 		name: 'Media',
 		items: [
-			{ n: 'Image', t: 'img', p: 'image', x: 'Alt text', v: SQ(40) },
-			{ n: 'Image with caption', t: 'figure', p: '', l: col(2), c: [{ n: '', t: 'img', p: 'photo', v: '' }, { n: '', t: 'figcaption', x: 'Caption', v: '' }], v: K(SQ(32), L(50)) },
 			{ n: 'Avatar', t: 'img', p: 'circular user avatar; falls back to initials', v: R(C(24), `<i class="pv-c" style="width:24px;height:24px;display:grid;place-items:center;font-size:8px;color:#fff;background:#6366f1">AL</i>`) },
 			{ n: 'Image gallery', t: 'div', p: 'grid of thumbnails that open a lightbox', l: grid(3, 2), v: `<i class="pv-bento" style="grid-template-columns:repeat(3,1fr)">${'<i></i>'.repeat(6)}</i>` },
 			{ n: 'Carousel', t: 'div', p: 'slide carousel with prev/next arrows and dot indicators, swipeable', v: K(R(T('‹'), SQ(30), T('›')), `<i class="pv-r" style="justify-content:center">${'<i class="pv-dot"></i>'.repeat(3)}</i>`) },
@@ -195,9 +175,7 @@ export const LIBRARY: Group[] = [
 			{ n: 'Audio player', t: 'div', p: 'compact audio player: play/pause, waveform scrubber, time', v: R(`<i class="pv-fab" style="width:16px;height:16px;font-size:8px">▶</i>`, `<i class="pv-wave"></i>`, T('2:31')) },
 			{ n: 'Before / after slider', t: 'div', p: 'two overlapping images with a draggable vertical divider to compare', v: `<i class="pv-sq" style="height:36px;background:linear-gradient(90deg,#a1a1aa 50%,#e4e4e7 50%);position:relative"></i>` },
 			{ n: 'Map embed', t: 'div', p: 'interactive map with a pin and a small info card', v: `<i class="pv-sq" style="height:36px;background:repeating-linear-gradient(45deg,#e0f2fe 0 6px,#f0f9ff 6px 12px);display:grid;place-items:center">📍</i>` },
-			{ n: 'Icon', t: 'svg', p: 'icon: ', v: R(IC, IC, IC) },
 			{ n: 'Logo', t: 'a', p: 'brand logo (wordmark + mark), links home', x: 'Acme', v: R(`<i class="pv-sw" style="background:#18181b;border-radius:4px"></i>`, `<b class="pv-t">Acme</b>`) },
-			{ n: 'Aspect-ratio frame', t: 'div', p: '16:9 media frame that crops content to fit', v: SQ(30) },
 			{ n: 'Embed (iframe)', t: 'iframe', p: 'embedded third-party content (e.g. YouTube, Figma, CodePen)', v: `<i class="pv-sq" style="height:34px;display:grid;place-items:center">&lt;/&gt;</i>` }
 		]
 	},
@@ -206,14 +184,12 @@ export const LIBRARY: Group[] = [
 		items: [
 			{ n: 'Alert', t: 'div', p: 'inline alert with icon, title and message; variants: info / success / warning / error; dismissible', l: { dir: 'row', gap: 3, pad: 4 }, v: `<i class="pv-bx" style="background:#fef2f2;border-color:#fecaca">${R('⚠', K(L(50), L(80)))}</i>` },
 			{ n: 'Toast', t: 'div', p: 'toast notification in the corner: icon, message, undo action, auto-dismiss after 5s', v: `<i class="pv-bx" style="background:#18181b;color:#fff">${R('<i class="pv-t" style="color:#fff">✓ Saved</i>', '<i style="flex:1"></i>', '<i class="pv-t" style="color:#a5b4fc">Undo</i>')}</i>` },
-			{ n: 'Banner', t: 'div', p: 'full-width banner at top of page with message and action link', l: { ...rowB, pad: 2 }, v: `<i class="pv-r" style="background:#6366f1;padding:3px;border-radius:3px;justify-content:center"><i class="pv-t" style="color:#fff">New: v2 is here →</i></i>` },
-			{ n: 'Spinner', t: 'div', p: 'loading spinner', v: '<i class="pv-spin"></i>' },
+			{ n: 'Spinner', t: 'div', p: 'indeterminate loading spinner that inherits the current text color', v: '<i class="pv-spin"></i>' },
 			{ n: 'Skeleton', t: 'div', p: 'skeleton placeholder shimmer matching the shape of the content being loaded', l: col(2), v: K(R(C(16), K(L(60), L(40))), L(100), L(80)) },
 			{ n: 'Field error', t: 'small', p: 'inline validation message under an input, red, with icon', x: 'Email is required', v: K(`<i class="pv-i" style="border-color:#f87171"></i>`, `<i class="pv-t" style="color:#dc2626">Email is required</i>`) },
 			{ n: 'Success state', t: 'div', p: 'centered success confirmation: animated checkmark, title, next-step button', l: { dir: 'col', align: 'center', gap: 3 }, v: `<i class="pv-k" style="align-items:center"><i class="pv-c" style="width:20px;height:20px;background:#22c55e;color:#fff;display:grid;place-items:center;font-size:10px">✓</i>${L(40)}</i>` },
 			{ n: 'Notification badge', t: 'span', p: 'red count bubble on the corner of an icon (e.g. bell with 3)', v: `<i class="pv-r"><i style="position:relative">🔔<i class="pv-cnt">3</i></i></i>` },
-			{ n: 'Progress steps toast', t: 'div', p: 'persistent task progress panel listing background jobs with per-item progress', v: BX(R(T('Exporting'), '<i style="flex:1"></i>', T('2/3')), `<i class="pv-bar"><i style="width:66%"></i></i>`) },
-			{ n: 'Inline loading text', t: 'span', p: 'text with animated ellipsis while waiting', x: 'Thinking…', v: T('Thinking<b>…</b>') }
+			{ n: 'Progress steps toast', t: 'div', p: 'persistent task progress panel listing background jobs with per-item progress', v: BX(R(T('Exporting'), '<i style="flex:1"></i>', T('2/3')), `<i class="pv-bar"><i style="width:66%"></i></i>`) }
 		]
 	},
 	{
@@ -256,11 +232,9 @@ export const LIBRARY: Group[] = [
 			{ n: 'Pricing table', t: 'section', p: 'three pricing tiers side by side, middle one emphasized', l: grid(3), v: R(BX(L(40), H(50), L(70)), `<i class="pv-bx" style="border-color:#6366f1">${L(40)}${H(50)}${L(70)}</i>`, BX(L(40), H(50), L(70))) },
 			{ n: 'Billing toggle', t: 'div', p: 'monthly / yearly switch with “Save 20%” badge', l: row, v: R(T('Monthly'), '<i class="pv-tg on"></i>', T('Yearly'), BDG('-20%')) },
 			{ n: 'Price with discount', t: 'div', p: 'current price large, original price struck through, discount badge', l: row, v: R(`<b class="pv-t" style="font-size:12px">$39</b>`, `<i class="pv-t" style="text-decoration:line-through;opacity:.5">$59</i>`, BDG('-33%')) },
-			{ n: 'Quantity selector', t: 'div', p: 'compact − 1 + quantity control', l: row, v: R(B('−', 'bo'), T('1'), B('+', 'bo')) },
 			{ n: 'Cart line item', t: 'div', p: 'cart row: thumbnail, name + variant, quantity selector, price, remove', l: { dir: 'row', gap: 3, align: 'center' }, v: R(`<i class="pv-sq" style="width:20px;height:20px"></i>`, K(L(60), L(30)), T('$49')) },
 			{ n: 'Order summary', t: 'aside', p: 'checkout summary: subtotal, shipping, tax, total, coupon field, checkout button', l: col(2, 4), v: BX(R(L(30), '<i style="flex:1"></i>', L(15)), R(L(25), '<i style="flex:1"></i>', L(15)), '<i class="pv-hr"></i>', R(H(30), '<i style="flex:1"></i>', H(20)), B('Checkout')) },
 			{ n: 'Coupon input', t: 'div', p: 'promo code input with apply button; shows applied code as removable chip', l: row, v: R(I('PROMO'), B('Apply', 'bo')) },
-			{ n: 'Checkout steps', t: 'ol', p: 'Cart → Shipping → Payment → Review breadcrumb-style steps', v: T('<b>Cart</b> › Shipping › Payment') },
 			{ n: 'Wishlist heart', t: 'button', p: 'heart icon toggle, fills with color and pops when added', v: `<i class="pv-t" style="color:#ef4444;font-size:14px">♥</i>` }
 		]
 	},
@@ -287,7 +261,6 @@ export const LIBRARY: Group[] = [
 		name: 'Charts',
 		items: [
 			{ n: 'Line chart', t: 'figure', p: 'line chart over time with axes, gridlines, hover tooltip; data: ', v: `<i class="pv-chart"><svg viewBox="0 0 60 30"><polyline points="0,25 10,18 20,21 30,10 40,13 50,5 60,8" fill="none" stroke="#6366f1" stroke-width="2"/></svg></i>` },
-			{ n: 'Area chart', t: 'figure', p: 'stacked area chart comparing series; data: ', v: `<i class="pv-chart"><svg viewBox="0 0 60 30"><path d="M0,30 L0,20 15,14 30,17 45,8 60,10 60,30Z" fill="#c7d2fe"/><path d="M0,30 L0,26 15,22 30,24 45,18 60,20 60,30Z" fill="#6366f1"/></svg></i>` },
 			{ n: 'Bar chart', t: 'figure', p: 'vertical bar chart with labels; data: ', v: `<i class="pv-chart"><svg viewBox="0 0 60 30"><g fill="#6366f1"><rect x="2" y="14" width="8" height="16"/><rect x="14" y="6" width="8" height="24"/><rect x="26" y="18" width="8" height="12"/><rect x="38" y="10" width="8" height="20"/><rect x="50" y="3" width="8" height="27"/></g></svg></i>` },
 			{ n: 'Donut chart', t: 'figure', p: 'donut chart with legend and total in the center; data: ', v: `<i class="pv-chart"><svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="10" fill="none" stroke="#e4e4e7" stroke-width="6"/><circle cx="15" cy="15" r="10" fill="none" stroke="#6366f1" stroke-width="6" stroke-dasharray="40 63" transform="rotate(-90 15 15)"/><circle cx="15" cy="15" r="10" fill="none" stroke="#f59e0b" stroke-width="6" stroke-dasharray="14 63" stroke-dashoffset="-40" transform="rotate(-90 15 15)"/></svg></i>` },
 			{ n: 'Sparkline', t: 'span', p: 'tiny inline trend line next to a number', v: R(`<b class="pv-t">1,284</b>`, `<svg viewBox="0 0 40 12" width="40"><polyline points="0,10 8,7 16,8 24,3 32,5 40,1" fill="none" stroke="#22c55e" stroke-width="1.5"/></svg>`) },
@@ -311,7 +284,6 @@ export const LIBRARY: Group[] = [
 			{ n: 'Confetti button', t: 'button', p: 'primary button that bursts confetti when clicked', x: 'Celebrate', v: `<i class="pv-b">🎉 Celebrate</i>` },
 			{ n: 'Scroll progress', t: 'div', p: 'thin bar fixed at the very top showing reading progress', v: `<i class="pv-bar" style="height:3px"><i style="width:40%"></i></i>` },
 			{ n: 'Dock magnifier', t: 'nav', p: 'macOS-style dock: icons magnify smoothly as the cursor approaches', l: { dir: 'row', align: 'end', gap: 2 }, v: `<i class="pv-r" style="align-items:flex-end">${[10, 14, 20, 14, 10].map((s) => `<i class="pv-sq" style="width:${s}px;height:${s}px;border-radius:3px"></i>`).join('')}</i>` },
-			{ n: 'Cursor blob', t: 'div', p: 'soft gradient blob that lazily follows the cursor behind content', v: `<i class="pv-sq" style="height:30px;background:radial-gradient(circle at 60% 50%,#a5b4fc,transparent 50%),#fafafa"></i>` },
 			{ n: 'Number ticker', t: 'span', p: 'number that counts up from 0 when scrolled into view', x: '10,000+', v: `<b class="pv-t" style="font-size:13px">10,000+</b>` },
 			{ n: 'Shortcut cheat sheet', t: 'dialog', p: 'modal opened with “?” listing keyboard shortcuts grouped by area', v: BX(R(L(50), '<i style="flex:1"></i>', '<i class="pv-kbd">⌘K</i>'), R(L(40), '<i style="flex:1"></i>', '<i class="pv-kbd">?</i>')) },
 			{ n: 'Sticker / stamp', t: 'span', p: 'rotated circular sticker badge with curved text, slowly spinning', x: 'NEW · NEW ·', v: `<i class="pv-c" style="width:26px;height:26px;border:1.5px dashed #6366f1;background:#eef2ff;display:grid;place-items:center;font-size:6px;transform:rotate(-15deg)">NEW</i>` },

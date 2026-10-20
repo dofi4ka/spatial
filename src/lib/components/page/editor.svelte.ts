@@ -17,6 +17,8 @@ export class PageEditorState {
 	canRedo = $state(false);
 	/** bumps when the inspector prompt field should grab focus */
 	focusPrompt = $state(0);
+	/** bumps when the inspector text field should grab focus */
+	focusText = $state(0);
 
 	#undo: string[] = [];
 	#redo: string[] = [];
@@ -170,6 +172,16 @@ export class PageEditorState {
 			const [n] = parent.children.splice(i, 1);
 			parent.children.splice(j, 0, n);
 		});
+	}
+
+	/** Add a blank element next to the selection (or inside it with `inside`, or into the page). */
+	addBlank(kind: 'div' | 'text', inside = false) {
+		const node = kind === 'div' ? makeNode({ tag: 'div' }) : makeNode({ tag: 'p', text: 'Text' });
+		const sel = this.selected;
+		const parent = sel ? findParent(this.root, sel.id) : null;
+		if (!sel || !parent || (inside && !VOID_TAGS.has(sel.tag))) this.insert(node, sel?.id ?? this.root.id, Infinity);
+		else this.insert(node, parent.id, parent.children.findIndex((c) => c.id === sel.id) + 1);
+		if (kind === 'text') this.focusText++;
 	}
 
 	addChild(id: string) {

@@ -68,6 +68,10 @@
 			if (e.key === 'Escape') (e.target as HTMLElement).blur();
 			return;
 		}
+		if (!mod && !e.altKey && (e.code === 'KeyD' || e.code === 'KeyT')) {
+			e.preventDefault();
+			return ed.addBlank(e.code === 'KeyD' ? 'div' : 'text', e.shiftKey);
+		}
 		const id = ed.selectedId;
 		if (!id) return;
 		const notRoot = id !== ed.root.id;
@@ -104,12 +108,19 @@
 			<button class="icon-btn" title="Undo (⌘Z)" disabled={!ed.canUndo} class:opacity-30={!ed.canUndo} onclick={() => ed.undo()}>{@html icons.undo}</button>
 			<button class="icon-btn" title="Redo (⇧⌘Z)" disabled={!ed.canRedo} class:opacity-30={!ed.canRedo} onclick={() => ed.redo()}>{@html icons.redo}</button>
 			<div class="mx-2 h-5 w-px bg-zinc-200"></div>
+			<button class="btn-ghost h-8 text-xs" title="Add div after the selection (D) · Shift-click / Shift+D adds it inside" onclick={(e) => ed.addBlank('div', e.shiftKey)}>
+				{@html icons.wrap} Div <span class="kbd">D</span>
+			</button>
+			<button class="btn-ghost h-8 text-xs" title="Add text after the selection (T) · Shift-click / Shift+T adds it inside" onclick={(e) => ed.addBlank('text', e.shiftKey)}>
+				{@html icons.text} Text <span class="kbd">T</span>
+			</button>
+			<div class="mx-2 h-5 w-px bg-zinc-200"></div>
 			<button class="icon-btn {width === 'full' ? 'bg-zinc-100 text-zinc-900' : ''}" title="Desktop" onclick={() => (width = 'full')}>{@html icons.desktop}</button>
 			<button class="icon-btn {width === 768 ? 'bg-zinc-100 text-zinc-900' : ''}" title="Tablet · 768px" onclick={() => (width = 768)}>{@html icons.tablet}</button>
 			<button class="icon-btn {width === 390 ? 'bg-zinc-100 text-zinc-900' : ''}" title="Mobile · 390px" onclick={() => (width = 390)}>{@html icons.mobile}</button>
 			<div class="flex-1"></div>
 			<span class="hidden text-[11px] text-zinc-400 lg:inline">
-				Drag to place · <span class="kbd">⌫</span> delete · <span class="kbd">⌘D</span> duplicate · <span class="kbd">⌘G</span> wrap · <span class="kbd">Esc</span> parent
+				<span class="kbd">⇧</span>+D/T inside · <span class="kbd">⌫</span> delete · <span class="kbd">⌘D</span> duplicate · <span class="kbd">⌘G</span> wrap · <span class="kbd">Esc</span> parent
 			</span>
 		</div>
 		<div

@@ -6,7 +6,7 @@ A collaborative editor for writing complicated prompts on an infinite canvas.
 - **Markdown** files: WYSIWYG editor (Milkdown), stored as plain `.md`.
 - **Images**: drop, paste or upload onto the canvas.
 - **Drawings**: open in Excalidraw. Each edit also renders the drawing to PNG, which is used for the canvas preview, mentions and the export.
-- **Pages**: a prompt-first site builder. Every element has an HTML tag, a natural-language **prompt**, optional literal **text**, and an **auto layout** (column / row / grid, gap, padding, align, justify, hug/fill sizing). There are no styling options on purpose. A library of 200+ components (grouped, searchable) can be dragged onto the page.
+- **Pages**: a prompt-first site builder. Every element has an HTML tag, a natural-language **prompt**, optional literal **text**, and an **auto layout** (column / row / grid, gap, padding, align, justify, hug/fill sizing). There are no styling options on purpose. A library of ~180 components (grouped, searchable) can be dragged onto the page.
 - **Mentions**: type `@` in a markdown doc or in a page element's prompt/text to reference another file (image, page, markdown, canvas). Mentions follow renames and moves; ⌘-click one in markdown to open it. Mentioning an image in markdown embeds it; in a page, an `<img>`/`<a>` gets its `src`/`href` from the first mention.
 - **Export .zip**: canvases become folders, markdown → `.md`, images → image files, drawings → `.png`, pages → `.html` with layout as Tailwind classes and prompts as HTML comments. Every mention becomes the relative path to the mentioned file (e.g. `../Home.html`, `` `./Hero shot.png` `` in prompts). Images uploaded straight into a markdown doc are exported next to it as `<doc>.image-N.<ext>`.
 - **Live collaboration**: changes, presence and cursors sync through Server-Sent Events. Edits to the same file are last-writer-wins; an open editor picks up remote changes when you pause typing.
@@ -51,7 +51,7 @@ Data (SQLite + images) lives in the `/data` volume. Set `ORIGIN` to the public U
 
 Canvas: `C` / `M` / `P` / `D` / `I` new canvas / markdown / page / drawing / image · double-click to open · `Enter` open · `F2` rename · `⌘D` duplicate · `⌫` delete · `Space`+drag or scroll to pan · `⌘`/pinch+scroll to zoom · `Shift+1` fit. Drag cards onto a canvas card or a breadcrumb to move them there.
 
-Page editor: drag components from the left · `⌫` delete · `⌘D` duplicate · `⌘G` wrap in container (`⇧⌘G` unwrap) · `⌘C`/`⌘V` copy/paste · `Alt+↑/↓` reorder · `Esc` select parent · `Enter` / double-click edit prompt · `⌘Z` / `⇧⌘Z` undo/redo.
+Page editor: `D` / `T` add a div / text after the selection (`⇧D` / `⇧T` inside it) · drag components from the left · `⌫` delete · `⌘D` duplicate · `⌘G` wrap in container (`⇧⌘G` unwrap) · `⌘C`/`⌘V` copy/paste · `Alt+↑/↓` reorder · `Esc` select parent · `Enter` / double-click edit prompt · `⌘Z` / `⇧⌘Z` undo/redo.
 
 ## Layout
 
