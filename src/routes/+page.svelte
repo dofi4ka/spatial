@@ -50,7 +50,7 @@
 					</label>
 					<label class="vis-option">
 						<input type="radio" name="visibility" value="public" />
-						<span><b>{@html icons.globe} Public</b>Everyone on this workspace can see it. Only you and the people you add can edit it.</span>
+						<span><b>{@html icons.globe} Public</b>Every signed-in user can see it. Only you and the people you add can edit it.</span>
 					</label>
 				</fieldset>
 				<div class="flex justify-end gap-2">

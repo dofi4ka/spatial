@@ -11,7 +11,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const path = event.url.pathname;
 	// /export/<token>/… authenticates with the token in the URL (for curl)
-	if (!event.locals.user && path !== '/login' && !path.startsWith('/export/')) {
+	if (!event.locals.user && path !== '/login' && path !== '/signup' && !path.startsWith('/export/')) {
 		if (path.startsWith('/api/') || path.startsWith('/uploads/')) return new Response('Unauthorized', { status: 401 });
 		redirect(303, '/login');
 	}

@@ -44,7 +44,7 @@
 				</label>
 				<label class="vis-option">
 					<input type="radio" name="visibility" value="public" checked={data.project.visibility === 'public'} />
-					<span><b>{@html icons.globe} Public</b>Everyone on this workspace can see it. Only the owner and members can edit it.</span>
+					<span><b>{@html icons.globe} Public</b>Every signed-in user can see it. Only the owner and members can edit it.</span>
 				</label>
 			</fieldset>
 			{#if isOwner}

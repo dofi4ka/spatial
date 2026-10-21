@@ -13,7 +13,7 @@
 	<main class="mx-auto max-w-5xl p-6">
 		<AdminNav />
 		<h1 class="mb-1 text-2xl font-semibold">Users</h1>
-		<p class="mb-6 text-sm text-zinc-500">There is no public sign-up. Each user has their own projects and sees public projects of others; owners add people to their projects.</p>
+		<p class="mb-6 text-sm text-zinc-500">Anyone can sign up at <a href="/signup" class="text-indigo-600 hover:underline">/signup</a>; you can also create accounts here. Each user has their own projects and sees public projects of others; owners add people to their projects.</p>
 
 		{#if form?.error}<div class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{form.error}</div>{/if}
 		{#if form?.ok}<div class="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{form.ok}</div>{/if}

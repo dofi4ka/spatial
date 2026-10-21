@@ -40,7 +40,7 @@ export const actions = {
 		const { project } = ctx(event, 'owner');
 		const email = String((await event.request.formData()).get('email') ?? '').trim();
 		const u = findUserByEmail(email);
-		if (!u) return fail(400, { error: `No user with the email “${email}”. Ask an admin to create the account first.` });
+		if (!u) return fail(400, { error: `No user with the email “${email}”. They need to sign up first.` });
 		if (u.id === project.owner_id) return fail(400, { error: 'The owner already has access' });
 		addMember(project.id, u.id);
 		return { ok: `Added ${u.name}` };

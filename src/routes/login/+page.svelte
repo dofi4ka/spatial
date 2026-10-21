@@ -21,6 +21,6 @@
 		</label>
 		{#if form?.error}<p class="mb-3 text-sm text-red-600">{form.error}</p>{/if}
 		<button class="btn-primary w-full">Sign in</button>
-		<p class="mt-4 text-center text-xs text-zinc-400">Accounts are created by an administrator.</p>
+		<p class="mt-4 text-center text-xs text-zinc-500">New here? <a href="/signup" class="text-indigo-600 hover:underline">Create an account</a></p>
 	</form>
 </div>
