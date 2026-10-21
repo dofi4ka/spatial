@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { contains, findNode, layoutStyle, sizeStyle, VOID_TAGS, type Dir, type PageNode } from '#lib/page.ts';
+	import { contains, findNode, layoutStyle, parsePage, sizeStyle, VOID_TAGS, type Dir, type PageNode } from '#lib/page.ts';
 	import { DND_TYPE, type PageEditorState } from './editor.svelte';
 	import { getContext } from 'svelte';
 	import type { Item } from '#lib/types.ts';
 	import { splitMentions } from '#lib/mentions.ts';
 	import { visualSrc } from '#lib/drawing.ts';
 	import MentionText from '../MentionText.svelte';
+	import PreviewNode from './PreviewNode.svelte';
 	import Self from './NodeView.svelte';
 
 	let { ed, node, parentDir = null, isRoot = false }: { ed: PageEditorState; node: PageNode; parentDir?: Dir | null; isRoot?: boolean } = $props();
@@ -21,6 +22,15 @@
 			if (src) return src;
 		}
 		return '';
+	});
+	// An empty element whose prompt mentions another page uses it as a component: show a preview.
+	let component = $derived.by(() => {
+		if (isRoot || node.children.length) return null;
+		for (const s of splitMentions(node.prompt)) {
+			const it = s.t === 'mention' ? items[s.id] : undefined;
+			if (it?.type === 'page') return { name: it.name, root: parsePage(it.content) };
+		}
+		return null;
 	});
 	let isVoid = $derived(VOID_TAGS.has(node.tag.toLowerCase()));
 	let selected = $derived(ed.selectedId === node.id);
@@ -40,7 +50,7 @@
 	}
 
 	function onDragOver(e: DragEvent) {
-		if (!e.dataTransfer?.types.includes(DND_TYPE) || !ed.dragging) return;
+		if (!e.dataTransfer?.types.includes(DND_TYPE) || !ed.dragging || ed.readonly) return;
 		e.preventDefault();
 		e.stopPropagation();
 		const d = ed.dragging;
@@ -86,7 +96,7 @@
 	class:hov={ed.hoverId === node.id && !selected}
 	class:target={dropHere}
 	style={isRoot ? '' : sizeStyle(node, parentDir)}
-	draggable={!isRoot}
+	draggable={!isRoot && !ed.readonly}
 	role="treeitem"
 	aria-selected={selected}
 	tabindex="-1"
@@ -104,6 +114,12 @@
 		ed.hoverId = node.id;
 	}}
 	onmouseleave={() => ed.hoverId === node.id && (ed.hoverId = null)}
+	oncontextmenu={(e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		ed.selectedId = node.id;
+		ed.menu = { x: e.clientX, y: e.clientY, id: node.id };
+	}}
 	onfocus={() => {}}
 	ondragstart={(e) => {
 		e.stopPropagation();
@@ -126,6 +142,17 @@
 			{#if node.prompt}<span class="nv-prompt"><MentionText text={node.prompt} /></span>{/if}
 			{#if !node.text && !node.prompt && !node.children.length}<span class="nv-empty">empty — describe it in the inspector</span>{/if}
 		</div>
+		{#if component}
+			<div class="nv-comp" title="Component: {component.name}">
+				{#if component.root.children.length}
+					<div style={layoutStyle(component.root)}>
+						{#each component.root.children as c (c.id)}<PreviewNode node={c} parentDir={component.root.layout.dir} />{/each}
+					</div>
+				{:else}
+					<span class="nv-empty">“{component.name}” is empty</span>
+				{/if}
+			</div>
+		{/if}
 	{/if}
 	{#if showChildren && !isVoid}
 		<div bind:this={childBox} class="nv-c" class:empty={!node.children.length} style={layoutStyle(node)}>
@@ -135,7 +162,7 @@
 			{/each}
 			{#if dropHere && ed.drop?.index === node.children.length}<div class="drop-line" class:v={node.layout.dir === 'row'}></div>{/if}
 			{#if isRoot && !node.children.length && !dropHere}
-				<div class="nv-placeholder">Drag components here from the left panel</div>
+				<div class="nv-placeholder">{ed.readonly ? 'This page is empty' : 'Drag components here from the left panel'}</div>
 			{/if}
 		</div>
 	{/if}
@@ -169,6 +196,7 @@
 	.nv-text { color: #18181b; font-weight: 500; white-space: pre-wrap; }
 	.nv-prompt { color: #71717a; font-style: italic; white-space: pre-wrap; }
 	.nv-empty { color: #a1a1aa; font-size: 11px; }
+	.nv-comp { pointer-events: none; opacity: 0.75; border-radius: 4px; padding: 4px; background: repeating-linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0 6px, transparent 6px 12px); outline: 1px solid rgba(245, 158, 11, 0.35); }
 	.nv-placeholder { color: #a1a1aa; text-align: center; padding: 80px 0; border: 2px dashed #e4e4e7; border-radius: 12px; }
 	.drop-line { flex: none; height: 3px; margin: -2px 0; background: #22c55e; border-radius: 2px; align-self: stretch; }
 	.drop-line.v { width: 3px; height: auto; margin: 0 -2px; min-height: 20px; }

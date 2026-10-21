@@ -6,6 +6,7 @@
 	import { visualSrc } from '#lib/drawing.ts';
 	import PagePreview from './PagePreview.svelte';
 	import FolderPreview from './FolderPreview.svelte';
+	import NotebookPreview from './NotebookPreview.svelte';
 
 	let {
 		store,
@@ -15,6 +16,7 @@
 		zoom,
 		lod,
 		renaming,
+		readonly = false,
 		onrename
 	}: {
 		store: ProjectStore;
@@ -24,10 +26,11 @@
 		zoom: number;
 		lod: boolean;
 		renaming: boolean;
+		readonly?: boolean;
 		onrename: (name: string | null) => void;
 	} = $props();
 
-	const accent: Record<string, string> = { canvas: 'text-indigo-500', markdown: 'text-sky-500', image: 'text-emerald-500', page: 'text-amber-500', drawing: 'text-rose-500' };
+	const accent: Record<string, string> = { canvas: 'text-indigo-500', markdown: 'text-sky-500', image: 'text-emerald-500', page: 'text-amber-500', drawing: 'text-rose-500', notebook: 'text-violet-500' };
 	let labelScale = $derived(Math.min(4, 1 / zoom));
 </script>
 
@@ -91,12 +94,14 @@
 			{/if}
 		{:else if item.type === 'page'}
 			<PagePreview content={item.content} width={item.w} />
+		{:else if item.type === 'notebook'}
+			<NotebookPreview content={item.content} />
 		{:else}
 			<FolderPreview {store} id={item.id} width={item.w} height={item.h} />
 		{/if}
 	</div>
 
-	{#if selected}
+	{#if selected && !readonly}
 		<div
 			data-resize={item.id}
 			class="absolute -right-1.5 -bottom-1.5 h-3 w-3 cursor-nwse-resize rounded-sm border-2 border-indigo-500 bg-white"

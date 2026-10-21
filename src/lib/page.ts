@@ -262,18 +262,20 @@ function linkAttr(tag: string, raw: string, resolve?: Resolve) {
 	return '';
 }
 
+/** Mentions become relative paths in the export (or "@Name" when there is no resolver). */
+function subMentions(s: string, quote: boolean, resolve?: Resolve) {
+	return replacePageMentions(s, (id, name) => {
+		const p = resolve?.(id)?.path;
+		return p ? (quote ? `\`${p}\`` : p) : `@${name}`;
+	});
+}
+
 export function nodeToHtml(n: PageNode, parentDir: Dir | null = null, depth = 0, resolve?: Resolve): string {
 	const indent = '  '.repeat(depth);
 	const tag = safeTag(n.tag);
 	const cls = twClasses(n, parentDir);
-	// mentions become relative paths in the export (or "@Name" when there is no resolver)
-	const sub = (s: string, quote: boolean) =>
-		replacePageMentions(s, (id, name) => {
-			const p = resolve?.(id)?.path;
-			return p ? (quote ? `\`${p}\`` : p) : `@${name}`;
-		});
-	const prompt = sub(n.prompt, true).trim();
-	const text = sub(n.text, false);
+	const prompt = subMentions(n.prompt, true, resolve).trim();
+	const text = subMentions(n.text, false, resolve);
 	const attrs = (cls ? ` class="${cls}"` : '') + linkAttr(tag, n.text + '\n' + n.prompt, resolve) + textAttr(tag, text);
 
 	if (VOID_TAGS.has(tag)) {
@@ -300,23 +302,17 @@ export function nodeToHtml(n: PageNode, parentDir: Dir | null = null, depth = 0,
 	return `${indent}<${tag}${attrs}>\n${inner.join('\n')}\n${indent}</${tag}>`;
 }
 
-export function pageToHtml(root: PageNode, title: string, resolve?: Resolve): string {
-	const body = { ...root, tag: 'body' };
-	return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${esc(title)}</title>
-  <!--
-    Layout reference. Classes are Tailwind CSS utilities describing layout only (flex / grid,
-    gap, padding, alignment, sizing). HTML comments are natural-language prompts describing the
-    element they appear in (or, for void elements like <img> / <input>, the element right after).
-    Paths in backticks like \`./hero.png\` or \`../docs/brief.md\` refer to other files in this export.
-    Visual styling is intentionally unspecified — follow the prompts.
-  -->
-</head>
-${nodeToHtml(body, null, 0, resolve)}
-</html>
-`;
+/**
+ * A page as a plain HTML fragment: the page prompt as a leading comment, then its elements.
+ * No document boilerplate, so a page doubles as a reusable snippet that other pages mention.
+ * The page's own layout only becomes a wrapper <div> when it differs from plain stacking.
+ */
+export function pageToHtml(root: PageNode, resolve?: Resolve): string {
+	const out: string[] = [];
+	const prompt = subMentions(root.prompt, true, resolve).trim();
+	if (prompt) out.push(comment(prompt, ''));
+	const cls = twClasses(root, null);
+	if (!cls || cls === 'flex flex-col') for (const c of root.children) out.push(nodeToHtml(c, root.layout.dir, 0, resolve));
+	else out.push(nodeToHtml({ ...root, tag: 'div', prompt: '' }, null, 0, resolve));
+	return out.join('\n') + '\n';
 }

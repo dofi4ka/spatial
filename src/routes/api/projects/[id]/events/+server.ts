@@ -2,7 +2,7 @@ import { ctx } from '#lib/server/api.ts';
 import { subscribe } from '#lib/server/hub.ts';
 
 export function GET(event) {
-	const { user, project } = ctx(event);
+	const { user, project } = ctx(event, 'view');
 	const clientId = event.url.searchParams.get('client') || crypto.randomUUID();
 	return new Response(subscribe(project.id, clientId, user), {
 		headers: {

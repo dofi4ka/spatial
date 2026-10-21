@@ -1,15 +1,17 @@
 import { redirect } from '@sveltejs/kit';
 import type { Handle } from '@sveltejs/kit/hooks';
-import { ensureAdmin, getSessionUser } from '#lib/server/db.ts';
+import { ensureAdmin, getSessionUser, migrateOwnership } from '#lib/server/db.ts';
 
 ensureAdmin();
+migrateOwnership();
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const token = event.cookies.get('sid');
 	event.locals.user = token ? getSessionUser(token) : null;
 
 	const path = event.url.pathname;
-	if (!event.locals.user && path !== '/login') {
+	// /export/<token>/… authenticates with the token in the URL (for curl)
+	if (!event.locals.user && path !== '/login' && !path.startsWith('/export/')) {
 		if (path.startsWith('/api/') || path.startsWith('/uploads/')) return new Response('Unauthorized', { status: 401 });
 		redirect(303, '/login');
 	}

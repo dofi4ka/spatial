@@ -64,6 +64,7 @@
 				})
 			);
 			await crepe.create();
+			if (store.readonly) crepe.setReadonly(true);
 			const c = crepe;
 			applyRemote = (md) => {
 				lastLocal = md;
@@ -163,7 +164,7 @@
 </script>
 
 <div class="relative h-full overflow-auto bg-white">
-	<div class="sticky top-0 z-10 flex justify-end px-4 pt-3">
+	<div class="sticky top-0 z-10 flex justify-end px-4 pt-3" class:hidden={store.readonly}>
 		<button
 			class="btn text-xs shadow-sm"
 			title="Mention a file (or type @ in the text). ⌘-click a mention to open it."
@@ -180,7 +181,7 @@
 		{#if loading}<div class="p-10 text-center text-sm text-zinc-400">Loading editor…</div>{/if}
 		<div bind:this={el} class="crepe-host" role="presentation" onkeydowncapture={onKeyDownCapture} onclickcapture={onClickCapture}></div>
 	</div>
-	<div class="pointer-events-none fixed bottom-3 left-1/2 -translate-x-1/2 text-[11px] text-zinc-400">
+	<div class="pointer-events-none fixed bottom-3 left-1/2 -translate-x-1/2 text-[11px] text-zinc-400" class:hidden={store.readonly}>
 		Type <span class="kbd">@</span> to mention a file · <span class="kbd">⌘</span>-click a mention to open it
 	</div>
 </div>

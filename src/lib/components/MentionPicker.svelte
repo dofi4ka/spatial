@@ -21,7 +21,7 @@
 
 	onMount(() => input?.focus());
 
-	const order = { image: 0, drawing: 1, markdown: 2, page: 3, canvas: 4 };
+	const order = { image: 0, drawing: 1, markdown: 2, page: 3, notebook: 4, canvas: 5 };
 	let results = $derived.by(() => {
 		const s = q.trim().toLowerCase();
 		return Object.values(store.items)
@@ -53,7 +53,7 @@
 		} else if (e.key === 'Escape') (e.preventDefault(), onclose());
 	}
 
-	const accent: Record<string, string> = { canvas: 'text-indigo-500', markdown: 'text-sky-500', image: 'text-emerald-500', page: 'text-amber-500', drawing: 'text-rose-500' };
+	const accent: Record<string, string> = { canvas: 'text-indigo-500', markdown: 'text-sky-500', image: 'text-emerald-500', page: 'text-amber-500', drawing: 'text-rose-500', notebook: 'text-violet-500' };
 </script>
 
 <div class="fixed inset-0 z-50" role="presentation" onpointerdown={onclose}></div>

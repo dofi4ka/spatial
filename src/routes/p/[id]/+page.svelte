@@ -4,5 +4,5 @@
 </script>
 
 {#key data.project.id}
-	<Workspace project={data.project} items={data.items} user={data.user!} />
+	<Workspace project={data.project} items={data.items} user={data.user!} access={data.access} />
 {/key}

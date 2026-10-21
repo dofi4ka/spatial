@@ -27,11 +27,11 @@
 	ondragover={(e) => e.preventDefault()}
 	ondrop={(e) => {
 		e.preventDefault();
-		replace(e.dataTransfer?.files[0]);
+		if (!store.readonly) replace(e.dataTransfer?.files[0]);
 	}}
 >
 	<div class="flex justify-center gap-2 p-3">
-		<button class="btn" disabled={busy} onclick={() => input.click()}>{@html icons.upload} {busy ? 'Uploading…' : 'Replace image'}</button>
+		{#if !store.readonly}<button class="btn" disabled={busy} onclick={() => input.click()}>{@html icons.upload} {busy ? 'Uploading…' : 'Replace image'}</button>{/if}
 		{#if item.content}<a class="btn" href="/uploads/{item.content}" download={item.name}>{@html icons.download} Download</a>{/if}
 	</div>
 	<div class="grid min-h-0 flex-1 place-items-center p-6">

@@ -6,6 +6,34 @@ export type DragPayload = { kind: 'comp'; g: number; i: number } | { kind: 'node
 
 export const DND_TYPE = 'application/x-spatial';
 
+// The element clipboard is shared by every page editor (and browser tab), so a copied element
+// survives closing the page and can be pasted into another one.
+const CLIP_KEY = 'spatial:page-clipboard';
+let memoryClip: string | null = null;
+
+function writeClipboard(n: PageNode) {
+	memoryClip = JSON.stringify(n);
+	try {
+		localStorage.setItem(CLIP_KEY, memoryClip);
+	} catch {
+		/* storage unavailable: keep it in memory */
+	}
+}
+
+export function readClipboard(): PageNode | null {
+	let raw = memoryClip;
+	try {
+		raw = localStorage.getItem(CLIP_KEY) ?? raw;
+	} catch {
+		/* ignore */
+	}
+	if (!raw) return null;
+	const n = parsePage(raw);
+	return n.tag === 'body' && !n.children.length ? null : n;
+}
+
+export type MenuState = { x: number; y: number; id: string };
+
 /** Editing state for one page: tree, selection, history, drag & drop. */
 export class PageEditorState {
 	root = $state<PageNode>(makeNode());
@@ -19,17 +47,21 @@ export class PageEditorState {
 	focusPrompt = $state(0);
 	/** bumps when the inspector text field should grab focus */
 	focusText = $state(0);
+	/** open right-click menu */
+	menu = $state<MenuState | null>(null);
 
 	#undo: string[] = [];
 	#redo: string[] = [];
 	#lastKey = '';
 	#lastAt = 0;
 	#onChange: (json: string) => void;
-	clipboard: PageNode | null = null;
+	/** view-only: every mutation is ignored (copying still works) */
+	readonly: boolean;
 
-	constructor(content: string, onChange: (json: string) => void) {
+	constructor(content: string, onChange: (json: string) => void, readonly = false) {
 		this.root = parsePage(content);
 		this.#onChange = onChange;
+		this.readonly = readonly;
 	}
 
 	get selected() {
@@ -61,6 +93,7 @@ export class PageEditorState {
 	}
 
 	mutate(fn: () => void, key = '') {
+		if (this.readonly) return;
 		this.checkpoint(key);
 		fn();
 		this.changed();
@@ -190,16 +223,33 @@ export class PageEditorState {
 
 	copy(id: string) {
 		const n = findNode(this.root, id);
-		if (n) this.clipboard = $state.snapshot(n) as PageNode;
+		if (n) writeClipboard($state.snapshot(n) as PageNode);
 	}
 
-	paste() {
-		if (!this.clipboard) return;
-		const node = cloneWithNewIds(this.clipboard);
-		const sel = this.selectedId;
-		const parent = sel ? findParent(this.root, sel) : null;
-		if (sel && parent) this.insert(node, parent.id, parent.children.findIndex((c) => c.id === sel) + 1);
-		else this.insert(node, sel ?? this.root.id, Infinity);
+	cut(id: string) {
+		if (id === this.root.id) return;
+		this.copy(id);
+		this.remove(id);
+	}
+
+	/** Paste after the selection, or `inside` it (at the end); the page itself always gets it inside. */
+	paste(inside = false) {
+		const clip = readClipboard();
+		if (!clip) return;
+		const node = cloneWithNewIds(clip);
+		const sel = this.selected;
+		const parent = sel ? findParent(this.root, sel.id) : null;
+		if (sel && parent && !(inside && !VOID_TAGS.has(sel.tag))) this.insert(node, parent.id, parent.children.findIndex((c) => c.id === sel.id) + 1);
+		else this.insert(node, sel?.id ?? this.root.id, Infinity);
+	}
+
+	/** Swap an element for another one in place (used when extracting it into its own page). */
+	replaceNode(id: string, next: PageNode) {
+		const parent = findParent(this.root, id);
+		if (!parent) return;
+		const i = parent.children.findIndex((c) => c.id === id);
+		this.mutate(() => parent.children.splice(i, 1, next));
+		this.selectedId = next.id;
 	}
 
 	/** Insert a library component next to the selection; into it if it's the page or an empty container. */

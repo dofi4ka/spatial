@@ -2,7 +2,7 @@
 	import { onMount, setContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import type { Item, Project, User } from '#lib/types.ts';
+	import type { Access, Item, Project, User } from '#lib/types.ts';
 	import { ProjectStore } from '#lib/store.svelte.ts';
 	import { icons } from '#lib/icons.ts';
 	import Canvas from './canvas/Canvas.svelte';
@@ -10,11 +10,13 @@
 	import ImageEditor from './editors/ImageEditor.svelte';
 	import PageEditor from './editors/PageEditor.svelte';
 	import DrawingEditor from './editors/DrawingEditor.svelte';
+	import NotebookEditor from './editors/NotebookEditor.svelte';
 
-	let { project, items, user }: { project: Project; items: Item[]; user: User } = $props();
+	let { project, items, user, access }: { project: Project; items: Item[]; user: User; access: Access } = $props();
 
 	// svelte-ignore state_referenced_locally
-	const store = new ProjectStore(project, items);
+	const store = new ProjectStore(project, items, access === 'view');
+	const readonly = store.readonly;
 	setContext('spatial:items', store.items);
 	onMount(() => {
 		const disconnect = store.connect();
@@ -87,7 +89,7 @@
 		}
 	});
 
-	const typeLabel = { markdown: 'Markdown', image: 'Image', page: 'Page', canvas: 'Canvas', drawing: 'Drawing' };
+	const typeLabel = { markdown: 'Markdown', image: 'Image', page: 'Page', canvas: 'Canvas', drawing: 'Drawing', notebook: 'Notebook' };
 </script>
 
 <svelte:head><title>{file ? `${file.name} · ` : ''}{project.name} · Spatial</title></svelte:head>
@@ -116,7 +118,7 @@
 						onkeydown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') renamingFile = false; }}
 					/>
 				{:else}
-					<button class="flex items-center gap-1.5 rounded-md px-2 py-1 font-semibold hover:bg-zinc-100" title="Rename" onclick={() => (renamingFile = true)}>
+					<button class="flex items-center gap-1.5 rounded-md px-2 py-1 font-semibold hover:bg-zinc-100" title={readonly ? file.name : 'Rename'} disabled={readonly} onclick={() => (renamingFile = true)}>
 						<span class="text-zinc-400">{@html icons[file.type]}</span>{file.name}
 					</button>
 				{/if}
@@ -125,6 +127,9 @@
 		</nav>
 		<div class="flex-1"></div>
 
+		{#if readonly}
+			<span class="flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-1 text-xs text-zinc-600" title="You can view this project. Ask the owner to add you to edit it.">{@html icons.eye} View only</span>
+		{/if}
 		{#if toast}<span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs text-amber-700">{toast}</span>{/if}
 		{#if fileViewers.length}
 			<span class="text-xs text-zinc-500">also here:</span>
@@ -140,21 +145,23 @@
 			{#if viewers.length > 6}<span class="ml-1 text-xs text-zinc-500">+{viewers.length - 6}</span>{/if}
 		</div>
 		<span class="h-2 w-2 rounded-full {store.connected ? 'bg-emerald-500' : 'bg-zinc-300'}" title={store.connected ? 'Live' : 'Reconnecting…'}></span>
-		<a class="btn" href="/api/projects/{project.id}/export" download title="Download the whole project as a .zip">{@html icons.download} Export .zip</a>
+		{#if !readonly}<a class="icon-btn" href="/p/{project.id}/settings" title="Project settings and people">{@html icons.settings}</a>{/if}
+		<a class="btn" href="/p/{project.id}/export" title="Export the project to your repository or as a .zip">{@html icons.download} Export</a>
 		{#if file}
 			<button class="icon-btn" title="Close (back to canvas)" onclick={() => nav(canvasId, null)}>{@html icons.close}</button>
 		{/if}
 	</header>
 
 	<div class="relative min-h-0 flex-1">
-		<Canvas {store} {canvasId} active={!file} onopen={open} />
+		<Canvas {store} {canvasId} active={!file} {readonly} onopen={open} />
 		{#if file}
 			{#key file.id}
 				<div class="absolute inset-0 z-20 bg-white">
 					{#if file.type === 'markdown'}<MarkdownEditor {store} item={file} onopen={open} />
 					{:else if file.type === 'image'}<ImageEditor {store} item={file} />
 					{:else if file.type === 'drawing'}<DrawingEditor {store} item={file} />
-					{:else if file.type === 'page'}<PageEditor {store} item={file} onopen={open} />{/if}
+					{:else if file.type === 'page'}<PageEditor {store} item={file} onopen={open} />
+					{:else if file.type === 'notebook'}<NotebookEditor {store} item={file} />{/if}
 				</div>
 			{/key}
 		{/if}

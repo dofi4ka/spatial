@@ -1,8 +1,8 @@
 import { fail } from '@sveltejs/kit';
-import { createUser, deleteUser, findUserByEmail, isEnvAdmin, listUsers, setUserAdmin, setUserPassword } from '#lib/server/db.ts';
+import { countOwnedProjects, createUser, deleteUser, findUserByEmail, isEnvAdmin, listUsers, setUserAdmin, setUserPassword, transferProjects } from '#lib/server/db.ts';
 
 export function load() {
-	return { users: listUsers().map((u) => ({ ...u, env_admin: isEnvAdmin(u.email) })) };
+	return { users: listUsers().map((u) => ({ ...u, env_admin: isEnvAdmin(u.email), projects: countOwnedProjects(u.id) })) };
 }
 
 export const actions = {
@@ -34,6 +34,8 @@ export const actions = {
 		const id = String((await request.formData()).get('id'));
 		const u = listUsers().find((u) => u.id === id);
 		if (!u || id === locals.user!.id || isEnvAdmin(u.email)) return fail(400, { error: 'This user cannot be deleted' });
+		// keep their projects: the admin deleting the account becomes the owner
+		transferProjects(id, locals.user!.id);
 		deleteUser(id);
 	}
 };

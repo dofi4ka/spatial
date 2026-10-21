@@ -9,12 +9,15 @@
 		store,
 		canvasId,
 		active,
+		readonly = false,
 		onopen
 	}: {
 		store: ProjectStore;
 		canvasId: string;
 		/** false while an editor overlay is open; disables keyboard shortcuts */
 		active: boolean;
+		/** view-only: selecting and opening work, nothing can be changed */
+		readonly?: boolean;
 		onopen: (item: Item) => void;
 	} = $props();
 
@@ -136,7 +139,7 @@
 			panning = true;
 		} else if (e.button !== 0) {
 			return;
-		} else if (target.closest('[data-resize]')) {
+		} else if (target.closest('[data-resize]') && !readonly) {
 			const id = target.closest<HTMLElement>('[data-resize]')!.dataset.resize!;
 			const it = store.items[id];
 			drag = { kind: 'resize', id, sx, sy, w: it.w, h: it.h, ratio: it.type === 'image' ? it.w / it.h : null };
@@ -146,6 +149,7 @@
 			if (e.shiftKey) selection = wasSelected ? selection : [...selection, id];
 			else if (!wasSelected) selection = [id];
 			const origin = new Map(selection.map((sid) => [sid, { x: store.items[sid].x, y: store.items[sid].y }]));
+			if (readonly) return void (!e.shiftKey && (selection = [id]));
 			drag = { kind: 'move', sx, sy, started: false, origin, clickId: id, wasSelected, shift: e.shiftKey };
 		} else {
 			const w = toWorld(sx, sy);
@@ -240,10 +244,10 @@
 	function onDblClick(e: MouseEvent) {
 		const t = e.target as HTMLElement;
 		const label = t.closest<HTMLElement>('[data-label]');
-		if (label) return void (renaming = label.dataset.label!);
+		if (label && !readonly) return void (renaming = label.dataset.label!);
 		const card = t.closest<HTMLElement>('[data-item]');
 		if (card) return onopen(store.items[card.dataset.item!]);
-		if (t.closest('[data-ui]')) return;
+		if (t.closest('[data-ui]') || readonly) return;
 		const { sx, sy } = local(e);
 		const w = toWorld(sx, sy);
 		menu = { sx, sy, wx: w.x, wy: w.y, item: null };
@@ -256,6 +260,7 @@
 		const card = (e.target as HTMLElement).closest<HTMLElement>('[data-item]');
 		const item = card ? store.items[card.dataset.item!] : null;
 		if (item && !selection.includes(item.id)) selection = [item.id];
+		if (readonly && !item) return void (menu = null);
 		menu = { sx, sy, wx: w.x, wy: w.y, item };
 	}
 
@@ -324,6 +329,11 @@
 		if (e.code === 'Space') {
 			spaceDown = true;
 			e.preventDefault();
+		} else if (readonly) {
+			if (e.key === 'Escape') ((selection = []), (menu = null));
+			else if (e.key === 'Enter' && selection.length === 1) onopen(store.items[selection[0]]);
+			else if (e.shiftKey && e.code === 'Digit1') fit();
+			else if (mod && e.key === 'a') (e.preventDefault(), (selection = items.map((i) => i.id)));
 		} else if (e.key === 'Delete' || e.key === 'Backspace') deleteSelection();
 		else if (mod && e.key === 'd') (e.preventDefault(), duplicateSelection());
 		else if (mod && e.key === 'a') (e.preventDefault(), (selection = items.map((i) => i.id)));
@@ -340,10 +350,11 @@
 		else if (!mod && !e.shiftKey && !e.altKey && e.key === 'p') (e.preventDefault(), create('page'));
 		else if (!mod && !e.shiftKey && !e.altKey && e.key === 'd') (e.preventDefault(), create('drawing'));
 		else if (!mod && !e.shiftKey && !e.altKey && e.key === 'i') (e.preventDefault(), create('image'));
+		else if (!mod && !e.shiftKey && !e.altKey && e.key === 'n') (e.preventDefault(), create('notebook'));
 	}
 
 	function onPaste(e: ClipboardEvent) {
-		if (!active || isTyping(e)) return;
+		if (!active || readonly || isTyping(e)) return;
 		const files = [...(e.clipboardData?.files ?? [])];
 		if (files.length) {
 			e.preventDefault();
@@ -382,7 +393,7 @@
 	ondblclick={onDblClick}
 	oncontextmenu={onContextMenu}
 	ondragover={(e) => {
-		if (e.dataTransfer?.types.includes('Files')) {
+		if (e.dataTransfer?.types.includes('Files') && !readonly) {
 			e.preventDefault();
 			fileDrag = true;
 		}
@@ -391,7 +402,7 @@
 	ondrop={(e) => {
 		fileDrag = false;
 		const files = [...(e.dataTransfer?.files ?? [])];
-		if (!files.length) return;
+		if (!files.length || readonly) return;
 		e.preventDefault();
 		const { sx, sy } = local(e);
 		addImages(files, toWorld(sx, sy));
@@ -405,6 +416,7 @@
 				zoom={vp.z}
 				{lod}
 				selected={selection.includes(item.id)}
+				{readonly}
 				dropTarget={dropTarget === item.id}
 				renaming={renaming === item.id}
 				onrename={(n) => rename(item.id, n)}
@@ -430,7 +442,7 @@
 		<div class="pointer-events-none absolute inset-0 grid place-items-center">
 			<div class="text-center text-zinc-400">
 				<div class="mb-1 text-base font-medium text-zinc-500">This canvas is empty</div>
-				<div class="text-sm">Use the toolbar below, double-click anywhere, or drop images here.</div>
+				<div class="text-sm">{readonly ? 'Nothing here yet.' : 'Use the toolbar below, double-click anywhere, or drop images here.'}</div>
 			</div>
 		</div>
 	{/if}
@@ -440,13 +452,15 @@
 	{/if}
 
 	<!-- toolbar -->
+	{#if !readonly}
 	<div data-ui class="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
-		{#each [['canvas', 'Canvas', 'C'], ['markdown', 'Markdown', 'M'], ['page', 'Page', 'P'], ['drawing', 'Drawing', 'D'], ['image', 'Image', 'I']] as [t, label, key]}
+		{#each [['canvas', 'Canvas', 'C'], ['markdown', 'Markdown', 'M'], ['page', 'Page', 'P'], ['drawing', 'Drawing', 'D'], ['notebook', 'Notebook', 'N'], ['image', 'Image', 'I']] as [t, label, key]}
 			<button class="btn-ghost h-9 px-3" title="New {label.toLowerCase()} ({key})" onclick={() => create(t as ItemType)}>
 				<span class="text-base">{@html icons[t as ItemType]}</span>{label}
 			</button>
 		{/each}
 	</div>
+	{/if}
 
 	<div data-ui class="absolute right-4 bottom-4 flex items-center gap-0.5 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
 		<button class="icon-btn" title="Zoom out" onclick={() => zoomAt(vw / 2, vh / 2, vp.z / 1.25)}>{@html icons.minus}</button>
@@ -459,11 +473,12 @@
 		<div
 			data-ui
 			class="absolute z-20 min-w-44 rounded-xl border border-zinc-200 bg-white p-1 text-sm shadow-xl"
-			style="left:{Math.min(menu.sx, vw - 190)}px;top:{Math.min(menu.sy, vh - 250)}px"
+			style="left:{Math.min(menu.sx, vw - 190)}px;top:{Math.min(menu.sy, vh - 290)}px"
 		>
 			{#if menu.item}
 				{@const it = menu.item}
 				<button class="menu-item" onclick={() => ((menu = null), onopen(it))}>Open</button>
+				{#if !readonly}
 				<button class="menu-item" onclick={() => ((menu = null), (renaming = it.id))}>Rename <span class="kbd">F2</span></button>
 				<button class="menu-item" onclick={() => ((menu = null), duplicateSelection())}>Duplicate <span class="kbd">⌘D</span></button>
 				{#if store.items[canvasId]?.parent_id}
@@ -471,6 +486,7 @@
 				{/if}
 				<div class="my-1 h-px bg-zinc-100"></div>
 				<button class="menu-item text-red-600" onclick={() => ((menu = null), deleteSelection())}>Delete <span class="kbd">⌫</span></button>
+				{/if}
 			{:else}
 				{@const at = { x: menu.wx, y: menu.wy }}
 				<div class="px-2 py-1 text-[11px] font-medium text-zinc-400 uppercase">Create here</div>
@@ -478,6 +494,7 @@
 				<button class="menu-item" onclick={() => create('markdown', at)}><span>{@html icons.markdown} Markdown</span><span class="kbd">M</span></button>
 				<button class="menu-item" onclick={() => create('page', at)}><span>{@html icons.page} Page</span><span class="kbd">P</span></button>
 				<button class="menu-item" onclick={() => create('drawing', at)}><span>{@html icons.drawing} Drawing</span><span class="kbd">D</span></button>
+				<button class="menu-item" onclick={() => create('notebook', at)}><span>{@html icons.notebook} Python notebook</span><span class="kbd">N</span></button>
 				<button class="menu-item" onclick={() => create('image', at)}><span>{@html icons.image} Image</span><span class="kbd">I</span></button>
 			{/if}
 		</div>

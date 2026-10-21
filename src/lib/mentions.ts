@@ -96,6 +96,7 @@ export function planExport(items: Item[], rootId: string): ExportPlan {
 					});
 				}
 			} else if (it.type === 'page') plan.paths.set(it.id, unique(base.replace(/\.html?$/i, ''), '.html'));
+			else if (it.type === 'notebook') plan.paths.set(it.id, unique(base.replace(/\.(py|ipynb)$/i, ''), '.py'));
 			else if (it.type === 'drawing') {
 				if (drawingPng(it.content)) plan.paths.set(it.id, unique(base.replace(/\.(png|excalidraw)$/i, ''), '.png'));
 			} else if (it.type === 'image' && it.content)

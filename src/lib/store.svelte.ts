@@ -10,7 +10,8 @@ export const DEFAULT_SIZE: Record<ItemType, [number, number]> = {
 	markdown: [320, 380],
 	drawing: [400, 300],
 	image: [320, 240],
-	page: [400, 300]
+	page: [400, 300],
+	notebook: [420, 340]
 };
 
 export class ProjectStore {
@@ -22,6 +23,8 @@ export class ProjectStore {
 	/** last item changed by someone else — editors use this to refresh */
 	remote = $state<RemoteChange | null>(null);
 	clientId = nanoid();
+	/** view-only access: editors hide their controls and nothing is sent to the server */
+	readonly: boolean;
 
 	byParent = $derived.by(() => {
 		const m: Record<string, Item[]> = {};
@@ -34,8 +37,9 @@ export class ProjectStore {
 	#flushTimer: ReturnType<typeof setTimeout> | null = null;
 	#lastCursor = 0;
 
-	constructor(project: Project, items: Item[]) {
+	constructor(project: Project, items: Item[], readonly = false) {
 		this.project = project;
+		this.readonly = readonly;
 		for (const it of items) this.items[it.id] = it;
 	}
 
@@ -139,7 +143,7 @@ export class ProjectStore {
 			project_id: this.project.id,
 			parent_id: parentId,
 			type,
-			name: { canvas: 'New canvas', markdown: 'Untitled.md', image: 'Image', page: 'New page', drawing: 'New drawing' }[type],
+			name: { canvas: 'New canvas', markdown: 'Untitled.md', image: 'Image', page: 'New page', drawing: 'New drawing', notebook: 'New notebook' }[type],
 			x: Math.round(x - (extra.w ?? w) / 2),
 			y: Math.round(y - (extra.h ?? h) / 2),
 			w,
@@ -162,7 +166,7 @@ export class ProjectStore {
 		const it = this.items[id];
 		if (!it) return;
 		Object.assign(it, patch);
-		if (!persist) return;
+		if (!persist || this.readonly) return;
 		this.#pending.set(id, { ...this.#pending.get(id), ...patch });
 		this.#flushTimer ??= setTimeout(() => this.flush(), 120);
 	}

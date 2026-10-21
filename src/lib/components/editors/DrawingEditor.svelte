@@ -105,6 +105,7 @@
 						scrollToContent: true
 					},
 					excalidrawAPI: (a) => (api = a),
+					viewModeEnabled: store.readonly,
 					UIOptions: { canvasActions: { loadScene: false, saveToActiveFile: false } },
 					onChange: (els, appState, files) => {
 						const key = keyOf(els, appState.viewBackgroundColor, Object.keys(files).length);

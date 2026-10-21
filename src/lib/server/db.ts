@@ -3,7 +3,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { nanoid } from 'nanoid';
-import type { Item, Project, User } from '#lib/types.ts';
+import type { Access, Item, Member, Project, ProjectSummary, User, Visibility } from '#lib/types.ts';
 
 // Load .env (does not override variables already set in the environment)
 if (existsSync('.env')) process.loadEnvFile('.env');
@@ -56,6 +56,20 @@ function open() {
 		);
 		CREATE INDEX IF NOT EXISTS items_project ON items(project_id);
 	`);
+	const projectCols = (db.prepare('PRAGMA table_info(projects)').all() as { name: string }[]).map((c) => c.name);
+	if (!projectCols.includes('export_token')) db.exec('ALTER TABLE projects ADD COLUMN export_token TEXT');
+	if (!projectCols.includes('owner_id')) db.exec('ALTER TABLE projects ADD COLUMN owner_id TEXT REFERENCES users(id) ON DELETE SET NULL');
+	if (!projectCols.includes('visibility')) db.exec("ALTER TABLE projects ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private'");
+	if (!projectCols.includes('description')) db.exec("ALTER TABLE projects ADD COLUMN description TEXT NOT NULL DEFAULT ''");
+	db.exec(`
+		CREATE TABLE IF NOT EXISTS project_members (
+			project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+			user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			added_at INTEGER NOT NULL,
+			PRIMARY KEY (project_id, user_id)
+		);
+		CREATE INDEX IF NOT EXISTS members_user ON project_members(user_id);
+	`);
 	return db;
 }
 
@@ -107,6 +121,11 @@ export function isEnvAdmin(email: string) {
 
 export function findUserByEmail(email: string) {
 	return db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim().toLowerCase()) as UserRow | undefined;
+}
+
+export function getUser(id: string) {
+	const r = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as UserRow | undefined;
+	return r ? toUser(r) : null;
 }
 
 export function listUsers() {
@@ -162,24 +181,77 @@ export function deleteSession(token: string) {
 
 // ---------- projects & items ----------
 
-export function listProjects() {
+const SUMMARY = `
+	SELECT p.id, p.name, p.description, p.root_id, p.owner_id, p.visibility, p.created_at, p.updated_at,
+		u.name AS owner_name,
+		(SELECT COUNT(*) FROM items i WHERE i.project_id = p.id AND i.parent_id IS NOT NULL) AS item_count,
+		(SELECT COUNT(*) FROM project_members m WHERE m.project_id = p.id) AS member_count
+	FROM projects p LEFT JOIN users u ON u.id = p.owner_id`;
+
+/** Projects the user owns or was added to. */
+export function listUserProjects(userId: string) {
+	return db
+		.prepare(`${SUMMARY} WHERE p.owner_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ?) ORDER BY p.updated_at DESC`)
+		.all(userId, userId) as ProjectSummary[];
+}
+
+/** Public projects of other people that the user isn't a member of. */
+export function listPublicProjects(userId: string) {
 	return db
 		.prepare(
-			`SELECT p.*, (SELECT COUNT(*) FROM items i WHERE i.project_id = p.id AND i.parent_id IS NOT NULL) AS item_count
-			 FROM projects p ORDER BY updated_at DESC`
+			`${SUMMARY} WHERE p.visibility = 'public' AND (p.owner_id IS NULL OR p.owner_id != ?)
+			 AND p.id NOT IN (SELECT project_id FROM project_members WHERE user_id = ?) ORDER BY p.updated_at DESC`
 		)
-		.all() as (Project & { item_count: number })[];
+		.all(userId, userId) as ProjectSummary[];
+}
+
+/** Every project (admin overview). */
+export function listAllProjects() {
+	return db.prepare(`${SUMMARY} ORDER BY p.updated_at DESC`).all() as ProjectSummary[];
 }
 
 export function getProject(id: string) {
 	return db.prepare('SELECT * FROM projects WHERE id = ?').get(id) as Project | undefined;
 }
 
-export function createProject(name: string, userId: string) {
+/** The project without server-only fields, safe to send to the browser. */
+export function clientProject(p: Project): Project {
+	const { export_token: _, ...rest } = p;
+	return rest;
+}
+
+export function isMember(projectId: string, userId: string) {
+	return !!db.prepare('SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?').get(projectId, userId);
+}
+
+/**
+ * GitHub-like access: the owner and members can edit; public projects are visible to every
+ * signed-in user; admins can view everything (to moderate) but only edit projects they belong to.
+ */
+export function projectAccess(p: Project, user: User | null): Access | null {
+	if (!user) return null;
+	if (p.owner_id === user.id) return 'owner';
+	if (isMember(p.id, user.id)) return 'edit';
+	if (p.visibility === 'public' || user.is_admin) return 'view';
+	return null;
+}
+
+export const canEdit = (a: Access | null) => a === 'owner' || a === 'edit';
+
+export function createProject(name: string, userId: string, description = '', visibility: Visibility = 'private') {
 	const id = nanoid(10);
 	const rootId = nanoid(12);
 	const now = Date.now();
-	db.prepare('INSERT INTO projects (id, name, root_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').run(id, name, rootId, now, now);
+	db.prepare('INSERT INTO projects (id, name, description, root_id, owner_id, visibility, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
+		id,
+		name,
+		description,
+		rootId,
+		userId,
+		visibility,
+		now,
+		now
+	);
 	db.prepare(
 		`INSERT INTO items (id, project_id, parent_id, type, name, x, y, w, h, content, updated_at, updated_by)
 		 VALUES (?, ?, NULL, 'canvas', ?, 0, 0, 0, 0, '', ?, ?)`
@@ -192,9 +264,84 @@ export function renameProject(id: string, name: string) {
 	db.prepare('UPDATE items SET name = ? WHERE id = (SELECT root_id FROM projects WHERE id = ?)').run(name, id);
 }
 
+export function setProjectDescription(id: string, description: string) {
+	db.prepare('UPDATE projects SET description = ?, updated_at = ? WHERE id = ?').run(description, Date.now(), id);
+}
+
+export function setProjectVisibility(id: string, visibility: Visibility) {
+	const prev = getProject(id);
+	db.prepare('UPDATE projects SET visibility = ? WHERE id = ?').run(visibility, id);
+	// people who could view the public project may have copied its export link
+	if (prev?.visibility === 'public' && visibility === 'private') rotateExportToken(id);
+}
+
 export function deleteProject(id: string) {
 	db.prepare('DELETE FROM items WHERE project_id = ?').run(id);
+	db.prepare('DELETE FROM project_members WHERE project_id = ?').run(id);
 	db.prepare('DELETE FROM projects WHERE id = ?').run(id);
+}
+
+export function listMembers(projectId: string) {
+	return db
+		.prepare('SELECT u.id, u.email, u.name, m.added_at FROM project_members m JOIN users u ON u.id = m.user_id WHERE m.project_id = ? ORDER BY m.added_at')
+		.all(projectId) as Member[];
+}
+
+export function addMember(projectId: string, userId: string) {
+	db.prepare('INSERT OR IGNORE INTO project_members (project_id, user_id, added_at) VALUES (?, ?, ?)').run(projectId, userId, Date.now());
+}
+
+export function removeMember(projectId: string, userId: string) {
+	db.prepare('DELETE FROM project_members WHERE project_id = ? AND user_id = ?').run(projectId, userId);
+}
+
+/**
+ * Projects from before ownership existed: the creator (who made the root canvas) becomes the
+ * owner — or the env admin if unknown — and everyone else becomes a member, so nobody loses
+ * the access they had.
+ */
+export function migrateOwnership() {
+	const orphans = db.prepare('SELECT * FROM projects WHERE owner_id IS NULL').all() as Project[];
+	if (!orphans.length) return;
+	const users = db.prepare('SELECT id, email, is_admin FROM users ORDER BY created_at').all() as { id: string; email: string; is_admin: number }[];
+	if (!users.length) return;
+	const fallback = users.find((u) => isEnvAdmin(u.email)) ?? users.find((u) => u.is_admin) ?? users[0];
+	for (const p of orphans) {
+		const root = getItem(p.root_id);
+		const owner = users.find((u) => u.id === root?.updated_by) ?? fallback;
+		db.prepare('UPDATE projects SET owner_id = ? WHERE id = ?').run(owner.id, p.id);
+		for (const u of users) if (u.id !== owner.id) addMember(p.id, u.id);
+	}
+	console.info(`[spatial] assigned owners to ${orphans.length} existing project(s); other users were added as members`);
+}
+
+/** Before deleting a user, hand their projects to someone so nothing is lost. */
+export function transferProjects(fromUserId: string, toUserId: string) {
+	db.prepare('UPDATE projects SET owner_id = ? WHERE owner_id = ?').run(toUserId, fromUserId);
+	db.prepare('DELETE FROM project_members WHERE user_id = ? AND project_id IN (SELECT id FROM projects WHERE owner_id = ?)').run(toUserId, toUserId);
+}
+
+export function countOwnedProjects(userId: string) {
+	return (db.prepare('SELECT COUNT(*) AS n FROM projects WHERE owner_id = ?').get(userId) as { n: number }).n;
+}
+
+/** Secret used by the curl-able export URLs; created on first use. */
+export function exportToken(id: string) {
+	const row = db.prepare('SELECT export_token FROM projects WHERE id = ?').get(id) as { export_token: string | null } | undefined;
+	if (!row) return null;
+	return row.export_token ?? rotateExportToken(id);
+}
+
+/** Replaces the export token, invalidating previously shared commands. */
+export function rotateExportToken(id: string) {
+	const token = randomBytes(24).toString('base64url');
+	db.prepare('UPDATE projects SET export_token = ? WHERE id = ?').run(token, id);
+	return token;
+}
+
+export function getProjectByExportToken(token: string) {
+	if (!token || token.length < 20) return undefined;
+	return db.prepare('SELECT * FROM projects WHERE export_token = ?').get(token) as Project | undefined;
 }
 
 export function touchProject(id: string) {

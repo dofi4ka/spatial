@@ -19,7 +19,7 @@
 		const oy = (height - (y1 - y0) * s) / 2 - y0 * s;
 		return { s, ox, oy };
 	});
-	const tint: Record<string, string> = { canvas: '#eef2ff', markdown: '#fff', page: '#fff', image: '#f4f4f5', drawing: '#fff' };
+	const tint: Record<string, string> = { canvas: '#eef2ff', markdown: '#fff', page: '#fff', image: '#f4f4f5', drawing: '#fff', notebook: '#fafafa' };
 </script>
 
 <div class="relative h-full w-full overflow-hidden bg-[radial-gradient(#e4e4e7_1px,transparent_1px)] [background-size:10px_10px]">

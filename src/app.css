@@ -9,7 +9,7 @@ body { @apply bg-zinc-50 text-zinc-900 antialiased; font-size: 14px; }
 
 @layer components {
 	.field { @apply w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100; }
-	.field-sm { @apply w-full rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100; }
+	.field-sm { @apply w-full rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:bg-zinc-50 disabled:text-zinc-500; }
 	.btn { @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 active:bg-zinc-100 disabled:opacity-50; }
 	.btn-primary { @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50; }
 	.btn-ghost { @apply inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1 text-sm text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900; }
@@ -19,6 +19,12 @@ body { @apply bg-zinc-50 text-zinc-900 antialiased; font-size: 14px; }
 	.seg > button.on { @apply bg-white text-zinc-900 shadow-sm; }
 	.label { @apply mb-1 block text-[11px] font-medium uppercase tracking-wide text-zinc-400; }
 	.logo { width: 22px; height: 22px; border-radius: 6px; background: conic-gradient(from 200deg, #6366f1, #a5b4fc, #4338ca, #6366f1); }
+	.vis { @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium; }
+	.vis.private { @apply border-zinc-200 text-zinc-500; }
+	.vis.public { @apply border-emerald-200 bg-emerald-50 text-emerald-700; }
+	.vis-option { @apply flex flex-1 cursor-pointer gap-3 rounded-xl border border-zinc-200 p-3 text-sm text-zinc-500 transition has-checked:border-indigo-400 has-checked:bg-indigo-50/50; }
+	.vis-option input { @apply mt-1 accent-indigo-600; }
+	.vis-option b { @apply mb-0.5 flex items-center gap-1.5 font-medium text-zinc-900; }
 	.kbd { @apply rounded border border-zinc-200 bg-zinc-50 px-1 font-mono text-[10px] text-zinc-500; }
 }
 
