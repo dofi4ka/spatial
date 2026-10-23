@@ -14,6 +14,10 @@ export type Item = {
 	h: number;
 	/** markdown source, page JSON, Excalidraw scene JSON, notebook JSON, or uploaded image filename */
 	content: string;
+	/** content revision, bumped by every accepted content write (see ContentSync) */
+	rev: number;
+	/** left out of exports (and so hidden from coding agents); for a canvas, its whole subtree */
+	hidden: boolean;
 	updated_at: number;
 	updated_by: string | null;
 };

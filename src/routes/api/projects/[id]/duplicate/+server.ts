@@ -23,6 +23,7 @@ export async function POST(event) {
 			name: top ? `${src.name} copy` : src.name,
 			x: top ? src.x + dx : src.x,
 			y: top ? src.y + dy : src.y,
+			rev: 0,
 			updated_at: Date.now(),
 			updated_by: user.id
 		};

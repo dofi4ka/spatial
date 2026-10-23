@@ -79,6 +79,8 @@ export function planExport(items: Item[], rootId: string): ExportPlan {
 		const kids = [...(children.get(canvasId) ?? [])].sort((a, b) => a.y - b.y || a.x - b.x);
 		const later: (() => void)[] = [];
 		for (const it of kids) {
+			// hidden from export: left out entirely (a hidden canvas takes its subtree with it)
+			if (it.hidden) continue;
 			const base = clean(it.name);
 			if (it.type === 'canvas') {
 				const p = unique(base, '');

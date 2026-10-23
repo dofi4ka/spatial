@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Item } from '#lib/types.ts';
-	import type { ProjectStore } from '#lib/store.svelte.ts';
+	import type { Binding, ProjectStore } from '#lib/store.svelte.ts';
 	import { markdownMention, SCHEME } from '#lib/mentions.ts';
 	import { mentionSrc } from '#lib/markdown.ts';
 	import { isVisual } from '#lib/drawing.ts';
@@ -11,10 +11,8 @@
 
 	let el: HTMLDivElement;
 	let loading = $state(true);
-	let lastLocal = item.content;
-	let lastTyped = 0;
-	let saveTimer: ReturnType<typeof setTimeout>;
-	let applyRemote: ((md: string) => void) | null = null;
+	// svelte-ignore state_referenced_locally
+	const sync = store.sync(item.id);
 	let insertMarkdown: ((md: string, inline: boolean) => void) | null = null;
 	let insertLink: ((text: string, href: string) => void) | null = null;
 	let picker = $state<{ x: number; y: number; typed: boolean } | null>(null);
@@ -26,11 +24,13 @@
 			return it ? markdownMention(it.name, id, false) : all;
 		});
 
+	let binding: Binding | null = null;
+
 	onMount(() => {
 		let crepe: import('@milkdown/crepe').Crepe | null = null;
 		let destroyed = false;
 		(async () => {
-			const [{ Crepe }, { replaceAll, insert }, { editorViewCtx }, { TextSelection }] = await Promise.all([
+			const [{ Crepe }, utils, { editorViewCtx, parserCtx }, { TextSelection, Plugin }] = await Promise.all([
 				import('@milkdown/crepe'),
 				import('@milkdown/kit/utils'),
 				import('@milkdown/kit/core'),
@@ -39,10 +39,11 @@
 				import('@milkdown/crepe/theme/frame.css')
 			]);
 			if (destroyed) return;
+			const initial = store.items[item.id]?.content ?? item.content;
 			const upload = async (file: File) => `/uploads/${await store.upload(file)}`;
 			crepe = new Crepe({
 				root: el,
-				defaultValue: freshNames(item.content),
+				defaultValue: freshNames(initial),
 				featureConfigs: {
 					[Crepe.Feature.ImageBlock]: {
 						onUpload: upload,
@@ -54,22 +55,51 @@
 					[Crepe.Feature.Placeholder]: { text: 'Start writing, or type / for commands…' }
 				}
 			});
-			crepe.on((l) =>
-				l.markdownUpdated((_ctx, md) => {
-					if (md === lastLocal) return;
-					lastLocal = md;
-					lastTyped = Date.now();
-					clearTimeout(saveTimer);
-					saveTimer = setTimeout(() => store.update(item.id, { content: md }), 400);
-				})
+			// report every document change right away; the sync serializes when it sends
+			const { insert, getMarkdown } = utils;
+			crepe.editor.use(
+				utils.$prose(
+					() =>
+						new Plugin({
+							view: () => ({
+								update: (view, prev) => {
+									if (!view.state.doc.eq(prev.doc)) sync.changed();
+								}
+							})
+						})
+				)
 			);
 			await crepe.create();
 			if (store.readonly) crepe.setReadonly(true);
 			const c = crepe;
-			applyRemote = (md) => {
-				lastLocal = md;
-				c.editor.action(replaceAll(md, true));
+			binding = {
+				read: () => c.editor.action(getMarkdown()),
+				// replace only the part that differs, so the caret and selection stay where they are
+				write: (md) =>
+					c.editor.action((ctx) => {
+						const view = ctx.get(editorViewCtx);
+						const parsed = ctx.get(parserCtx)(freshNames(md));
+						if (!parsed) return;
+						const cur = view.state.doc;
+						// heading ids are filled in after parsing; reuse ours so unchanged headings compare equal
+						const ids = new Map<string, unknown>();
+						cur.descendants((n) => void (n.type.name === 'heading' && ids.set(n.textContent, n.attrs.id)));
+						type J = { type: string; attrs?: Record<string, unknown>; content?: J[] };
+						const fill = (j: J, n: import('@milkdown/kit/prose/model').Node): J => {
+							if (j.type === 'heading' && j.attrs && ids.has(n.textContent)) j.attrs.id = ids.get(n.textContent);
+							j.content?.forEach((c, i) => fill(c, n.child(i)));
+							return j;
+						};
+						const next = view.state.schema.nodeFromJSON(fill(parsed.toJSON() as J, parsed));
+						const start = cur.content.findDiffStart(next.content);
+						if (start == null) return;
+						let { a: endA, b: endB } = cur.content.findDiffEnd(next.content)!;
+						const overlap = start - Math.min(endA, endB);
+						if (overlap > 0) (endA += overlap), (endB += overlap);
+						view.dispatch(view.state.tr.replace(start, endA, next.slice(start, endB)).setMeta('addToHistory', false));
+					})
 			};
+			sync.attach(binding, initial);
 			// insert "@Name" as a link mark, followed by an unlinked space so typing continues outside it
 			insertLink = (text, href) => {
 				c.editor.action((ctx) => {
@@ -100,8 +130,7 @@
 		})();
 		return () => {
 			destroyed = true;
-			clearTimeout(saveTimer);
-			if (crepe && lastLocal !== store.items[item.id]?.content) store.update(item.id, { content: lastLocal });
+			if (binding) sync.detach(binding);
 			crepe?.destroy();
 		};
 	});
@@ -146,21 +175,6 @@
 		const it = store.items[a.getAttribute('href')!.slice(SCHEME.length)];
 		if (it) onopen?.(it);
 	}
-
-	// Pull in edits made by others, unless we're mid-typing (then retry shortly).
-	let retry: ReturnType<typeof setTimeout>;
-	$effect(() => {
-		const r = store.remote;
-		if (!r || r.id !== item.id) return;
-		const tryApply = () => {
-			const content = store.items[item.id]?.content;
-			if (content === undefined || content === lastLocal || !applyRemote) return;
-			if (Date.now() - lastTyped < 1500) return void (retry = setTimeout(tryApply, 800));
-			applyRemote(content);
-		};
-		clearTimeout(retry);
-		tryApply();
-	});
 </script>
 
 <div class="relative h-full overflow-auto bg-white">

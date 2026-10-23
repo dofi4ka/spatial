@@ -13,7 +13,8 @@
 		try {
 			const [w, h] = fitSize(...(await imageSize(file)));
 			const name = await store.upload(file);
-			store.update(item.id, { content: name, w, h });
+			store.setContent(item.id, name);
+			store.update(item.id, { w, h });
 		} catch (e) {
 			alert((e as Error).message);
 		}

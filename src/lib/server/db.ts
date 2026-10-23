@@ -61,6 +61,9 @@ function open() {
 	if (!projectCols.includes('owner_id')) db.exec('ALTER TABLE projects ADD COLUMN owner_id TEXT REFERENCES users(id) ON DELETE SET NULL');
 	if (!projectCols.includes('visibility')) db.exec("ALTER TABLE projects ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private'");
 	if (!projectCols.includes('description')) db.exec("ALTER TABLE projects ADD COLUMN description TEXT NOT NULL DEFAULT ''");
+	const itemCols = (db.prepare('PRAGMA table_info(items)').all() as { name: string }[]).map((c) => c.name);
+	if (!itemCols.includes('rev')) db.exec('ALTER TABLE items ADD COLUMN rev INTEGER NOT NULL DEFAULT 0');
+	if (!itemCols.includes('hidden')) db.exec('ALTER TABLE items ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0');
 	db.exec(`
 		CREATE TABLE IF NOT EXISTS project_members (
 			project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -348,22 +351,38 @@ export function touchProject(id: string) {
 	db.prepare('UPDATE projects SET updated_at = ? WHERE id = ?').run(Date.now(), id);
 }
 
+type ItemRow = Omit<Item, 'hidden'> & { hidden: number };
+const toItem = (r: ItemRow): Item => ({ ...r, hidden: !!r.hidden });
+
 export function listItems(projectId: string) {
-	return db.prepare('SELECT * FROM items WHERE project_id = ?').all(projectId) as Item[];
+	return (db.prepare('SELECT * FROM items WHERE project_id = ?').all(projectId) as ItemRow[]).map(toItem);
 }
 
 export function getItem(id: string) {
-	return db.prepare('SELECT * FROM items WHERE id = ?').get(id) as Item | undefined;
+	const r = db.prepare('SELECT * FROM items WHERE id = ?').get(id) as ItemRow | undefined;
+	return r ? toItem(r) : undefined;
 }
 
 export function insertItem(item: Item) {
 	db.prepare(
-		`INSERT INTO items (id, project_id, parent_id, type, name, x, y, w, h, content, updated_at, updated_by)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	).run(item.id, item.project_id, item.parent_id, item.type, item.name, item.x, item.y, item.w, item.h, item.content, item.updated_at, item.updated_by);
+		`INSERT INTO items (id, project_id, parent_id, type, name, x, y, w, h, content, updated_at, updated_by, rev, hidden)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	).run(item.id, item.project_id, item.parent_id, item.type, item.name, item.x, item.y, item.w, item.h, item.content, item.updated_at, item.updated_by, item.rev, item.hidden ? 1 : 0);
 }
 
-const EDITABLE = ['parent_id', 'name', 'x', 'y', 'w', 'h', 'content'] as const;
+/**
+ * Replaces the content if `baseRev` is still the current revision (the writer has seen every
+ * earlier change); otherwise returns null and the writer must merge and retry.
+ */
+export function setContent(id: string, baseRev: number, content: string, userId: string) {
+	const r = db
+		.prepare('UPDATE items SET content = ?, rev = rev + 1, updated_at = ?, updated_by = ? WHERE id = ? AND rev = ?')
+		.run(content, Date.now(), userId, id, baseRev);
+	return r.changes ? getItem(id)! : null;
+}
+
+/** Fields anyone may change without a revision check (last write wins). Content goes through setContent. */
+const EDITABLE = ['parent_id', 'name', 'x', 'y', 'w', 'h', 'hidden'] as const;
 export type ItemPatch = Partial<Pick<Item, (typeof EDITABLE)[number]>> & { id: string };
 
 export function updateItem(patch: ItemPatch, userId: string) {
@@ -372,7 +391,8 @@ export function updateItem(patch: ItemPatch, userId: string) {
 	for (const k of EDITABLE) {
 		if (k in patch) {
 			sets.push(`${k} = ?`);
-			vals.push(patch[k] as string | number | null);
+			const v = patch[k];
+			vals.push(typeof v === 'boolean' ? (v ? 1 : 0) : (v as string | number | null));
 		}
 	}
 	if (!sets.length) return getItem(patch.id);

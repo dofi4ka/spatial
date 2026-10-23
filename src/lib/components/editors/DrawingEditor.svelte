@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Item } from '#lib/types.ts';
-	import type { ProjectStore } from '#lib/store.svelte.ts';
+	import type { Binding, ProjectStore } from '#lib/store.svelte.ts';
 	import { parseDrawing, type DrawingData } from '#lib/drawing.ts';
 
 	let { store, item }: { store: ProjectStore; item: Item } = $props();
@@ -12,23 +12,17 @@
 
 	// svelte-ignore state_referenced_locally
 	const id = item.id;
-	let current: DrawingData = parseDrawing(item.content);
-	let lastLocal = item.content;
-	let lastEdit = 0;
+	// svelte-ignore state_referenced_locally
+	const initialContent = item.content;
+	let current: DrawingData = parseDrawing(initialContent);
 	let sceneKey = '';
 	let dirtyRender = false;
-	let saveTimer: ReturnType<typeof setTimeout>;
 	let renderTimer: ReturnType<typeof setTimeout>;
-	let applyRemote: ((d: DrawingData) => void) | null = null;
 	let renderNow: (() => Promise<void>) | null = null;
-
-	function save() {
-		clearTimeout(saveTimer);
-		const json = JSON.stringify(current);
-		if (json === lastLocal) return;
-		lastLocal = json;
-		store.update(id, { content: json });
-	}
+	// svelte-ignore state_referenced_locally
+	const sync = store.sync(id);
+	let binding: Binding | null = null;
+	const save = () => sync.changed(JSON.stringify(current));
 
 	onMount(() => {
 		let root: import('react-dom/client').Root | null = null;
@@ -80,19 +74,29 @@
 				}
 				// the scene may have changed while rendering; only the png fields are ours to set
 				current = { ...current, png, pngAt };
-				save();
+				if (binding && sync.binding === binding) save();
+				else if (store.items[id]) sync.changed(JSON.stringify({ ...parseDrawing(store.items[id].content), png, pngAt }));
 			};
 
 			const initial = current;
 			sceneKey = keyOf(initial.elements, initial.appState.viewBackgroundColor, Object.keys(initial.files).length);
 			let api: import('@excalidraw/excalidraw/types').ExcalidrawImperativeAPI | null = null;
 
-			applyRemote = (d) => {
-				if (!api) return;
-				current = d;
-				if (Object.keys(d.files).length) api.addFiles(Object.values(d.files) as never);
-				api.updateScene({ elements: d.elements as never, appState: { viewBackgroundColor: d.appState.viewBackgroundColor ?? '#ffffff' } as never });
-				sceneKey = keyOf(d.elements, d.appState.viewBackgroundColor, Object.keys(d.files).length);
+			binding = {
+				read: () => JSON.stringify(current),
+				write: (json) => {
+					const d = parseDrawing(json);
+					current = d;
+					if (!api) return;
+					if (Object.keys(d.files).length) api.addFiles(Object.values(d.files) as never);
+					// not undoable: undo should only revert our own strokes
+					api.updateScene({
+						elements: d.elements as never,
+						appState: { viewBackgroundColor: d.appState.viewBackgroundColor ?? '#ffffff' } as never,
+						captureUpdate: ex.CaptureUpdateAction.NEVER
+					});
+					sceneKey = keyOf(d.elements, d.appState.viewBackgroundColor, Object.keys(d.files).length);
+				}
 			};
 
 			root = createRoot(el);
@@ -104,7 +108,11 @@
 						files: initial.files as never,
 						scrollToContent: true
 					},
-					excalidrawAPI: (a) => (api = a),
+					excalidrawAPI: (a) => {
+						api = a;
+						// after Excalidraw has mounted, so it can take a scene update
+						setTimeout(() => !destroyed && binding && sync.attach(binding, initialContent));
+					},
 					viewModeEnabled: store.readonly,
 					UIOptions: { canvasActions: { loadScene: false, saveToActiveFile: false } },
 					onChange: (els, appState, files) => {
@@ -112,10 +120,8 @@
 						if (key === sceneKey) return;
 						sceneKey = key;
 						current = { ...current, ...snapshot(els, appState.viewBackgroundColor, files) };
-						lastEdit = Date.now();
 						dirtyRender = true;
-						clearTimeout(saveTimer);
-						saveTimer = setTimeout(save, 500);
+						save();
 						clearTimeout(renderTimer);
 						renderTimer = setTimeout(() => renderNow?.(), 1500);
 					}
@@ -129,28 +135,12 @@
 
 		return () => {
 			destroyed = true;
-			save();
+			if (binding) sync.detach(binding);
 			// keep the PNG in sync even if the editor closes right after an edit
 			if (dirtyRender) renderNow?.();
 			else clearTimeout(renderTimer);
 			root?.unmount();
 		};
-	});
-
-	// pull in edits made by others when we're idle
-	let retry: ReturnType<typeof setTimeout>;
-	$effect(() => {
-		const r = store.remote;
-		if (!r || r.id !== id) return;
-		const apply = () => {
-			const c = store.items[id]?.content;
-			if (c === undefined || c === lastLocal || !applyRemote) return;
-			if (Date.now() - lastEdit < 1500) return void (retry = setTimeout(apply, 800));
-			lastLocal = c;
-			applyRemote(parseDrawing(c));
-		};
-		clearTimeout(retry);
-		apply();
 	});
 </script>
 

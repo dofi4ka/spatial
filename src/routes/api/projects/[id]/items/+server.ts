@@ -28,6 +28,8 @@ export async function POST(event) {
 		w: Number(body.w) || 320,
 		h: Number(body.h) || 240,
 		content: String(body.content ?? ''),
+		rev: 0,
+		hidden: !!body.hidden,
 		updated_at: Date.now(),
 		updated_by: user.id
 	};

@@ -1,7 +1,8 @@
 import { nanoid } from 'nanoid';
 import type { Item, ItemType, Presence, Project, ServerEvent } from '#lib/types.ts';
+import { mergeContent } from '#lib/merge.ts';
 
-type Patch = Partial<Pick<Item, 'parent_id' | 'name' | 'x' | 'y' | 'w' | 'h' | 'content'>>;
+type Patch = Partial<Pick<Item, 'parent_id' | 'name' | 'x' | 'y' | 'w' | 'h' | 'hidden'>>;
 export type Cursor = { canvas: string | null; file: string | null; x: number; y: number; t: number };
 export type RemoteChange = { id: string; by: string; at: number };
 
@@ -13,6 +14,145 @@ export const DEFAULT_SIZE: Record<ItemType, [number, number]> = {
 	page: [400, 300],
 	notebook: [420, 340]
 };
+
+/** How an open editor exposes its document to ContentSync. */
+export type Binding = {
+	/** the editor's current content, including edits not reported yet */
+	read(): string;
+	/** replace the editor's content with a merged version (keep selection, skip undo history) */
+	write(content: string): void;
+};
+
+/**
+ * Keeps one item's content in sync with the server without losing anyone's edits.
+ *
+ * `base` is the latest server content we know (at revision `rev`). Local edits are sent on top
+ * of `rev` a few times per second, one request at a time. When someone else's version arrives
+ * (live, or as a 409 because they wrote first), our unsent edits are three-way merged into it,
+ * the editor shows the result, and the merge is sent on top of the new revision.
+ */
+export class ContentSync {
+	base: string;
+	rev: number;
+	binding: Binding | null = null;
+	#store: ProjectStore;
+	#id: string;
+	#inflight: string | null = null;
+	/** newest remote version that arrived while a write was in flight */
+	#queued: Item | null = null;
+	#timer: ReturnType<typeof setTimeout> | null = null;
+
+	constructor(store: ProjectStore, item: Item) {
+		this.#store = store;
+		this.#id = item.id;
+		this.base = item.content;
+		this.rev = item.rev;
+	}
+
+	get #item() {
+		return this.#store.items[this.#id];
+	}
+
+	/** current local content: the open editor's, else the last thing it (or setContent) left */
+	local() {
+		return this.binding?.read() ?? this.#item?.content ?? this.base;
+	}
+
+	get dirty() {
+		return this.#inflight !== null || this.local() !== this.base;
+	}
+
+	/** Call on every local change. `content` is optional when a binding can read it. */
+	changed(content?: string) {
+		const it = this.#item;
+		if (!it || this.#store.readonly) return;
+		it.content = content ?? this.local();
+		this.#timer ??= setTimeout(() => this.send(), 60);
+	}
+
+	/** `initial`: the content the editor was created with; anything newer is written into it. */
+	attach(b: Binding, initial: string) {
+		this.binding = b;
+		const c = this.#item?.content;
+		if (c !== undefined && c !== initial) b.write(c);
+	}
+
+	detach(b: Binding) {
+		if (this.binding !== b) return;
+		const content = b.read();
+		this.binding = null;
+		if (this.#item && content !== this.#item.content) this.changed(content);
+	}
+
+	async send() {
+		if (this.#timer) clearTimeout(this.#timer);
+		this.#timer = null;
+		if (this.#inflight !== null || !this.#item || this.#store.readonly) return;
+		const content = this.local();
+		if (this.#item.content !== content) this.#item.content = content;
+		if (content === this.base) return;
+		this.#inflight = content;
+		const p = this.#store.project.id;
+		let res: Response;
+		try {
+			res = await fetch(`/api/projects/${p}/items/${this.#id}/content`, {
+				method: 'PUT',
+				keepalive: content.length < 60000,
+				headers: { 'content-type': 'application/json', 'x-client-id': this.#store.clientId },
+				body: JSON.stringify({ rev: this.rev, content })
+			});
+		} catch {
+			this.#inflight = null;
+			this.#timer = setTimeout(() => this.send(), 1500);
+			return;
+		}
+		this.#inflight = null;
+		if (res.ok) {
+			const { rev } = (await res.json()) as { rev: number };
+			this.base = content;
+			this.rev = rev;
+			const q = this.#queued;
+			this.#queued = null;
+			if (q && q.rev > rev) this.#rebase(q);
+		} else if (res.status === 409) {
+			const { conflict } = (await res.json()) as { conflict: Item };
+			const q = this.#queued;
+			this.#queued = null;
+			this.#rebase(q && q.rev > conflict.rev ? q : conflict);
+		} else if (res.status === 404) {
+			return;
+		} else {
+			this.#timer = setTimeout(() => this.send(), 3000);
+			return;
+		}
+		if (this.local() !== this.base) this.#timer ??= setTimeout(() => this.send(), 60);
+	}
+
+	/** A newer server version of this item (live event, resync or conflict). */
+	receive(remote: Item) {
+		if (remote.rev <= this.rev) return;
+		if (this.#inflight !== null) {
+			if (!this.#queued || remote.rev > this.#queued.rev) this.#queued = remote;
+			return;
+		}
+		this.#rebase(remote);
+		if (this.local() !== this.base) this.#timer ??= setTimeout(() => this.send(), 60);
+	}
+
+	#rebase(remote: Item) {
+		const local = this.local();
+		const merged = mergeContent(remote.type, this.base, local, remote.content);
+		this.base = remote.content;
+		this.rev = remote.rev;
+		if (merged !== local) this.binding?.write(merged);
+		const it = this.#item;
+		if (it) {
+			it.rev = remote.rev;
+			// an editor may normalize what it was given; keep what it actually shows
+			it.content = this.binding?.read() ?? merged;
+		}
+	}
+}
 
 export class ProjectStore {
 	project: Project;
@@ -34,6 +174,7 @@ export class ProjectStore {
 
 	#es: EventSource | null = null;
 	#pending = new Map<string, Patch>();
+	#syncs = new Map<string, ContentSync>();
 	#flushTimer: ReturnType<typeof setTimeout> | null = null;
 	#lastCursor = 0;
 
@@ -102,9 +243,37 @@ export class ProjectStore {
 		const seen = new Set<string>();
 		for (const it of items) {
 			seen.add(it.id);
-			if (!this.#pending.has(it.id)) this.items[it.id] = it;
+			this.#merge(it);
 		}
 		for (const id of Object.keys(this.items)) if (!seen.has(id)) delete this.items[id];
+	}
+
+	/** Takes a server version of an item, keeping local unsaved field and content changes. */
+	#merge(it: Item, by?: string) {
+		const local = this.#pending.get(it.id);
+		const prev = this.items[it.id];
+		const sync = this.#syncs.get(it.id);
+		const content = prev?.content;
+		this.items[it.id] = { ...it, ...local };
+		if (sync && prev) {
+			// content is owned by the sync: it merges the remote version into ours
+			this.items[it.id].content = content!;
+			this.items[it.id].rev = sync.rev;
+			sync.receive(it);
+		}
+		if (prev && prev.content !== this.items[it.id].content) this.remote = { id: it.id, by: by ?? 'Someone', at: Date.now() };
+	}
+
+	/** The content sync of an item (created on first use). */
+	sync(id: string) {
+		let s = this.#syncs.get(id);
+		if (!s && this.items[id]) this.#syncs.set(id, (s = new ContentSync(this, this.items[id])));
+		return s!;
+	}
+
+	/** Set an item's content from outside an editor (e.g. a new image). */
+	setContent(id: string, content: string) {
+		if (this.items[id]) this.sync(id).changed(content);
 	}
 
 	#apply(ev: ServerEvent) {
@@ -116,14 +285,9 @@ export class ProjectStore {
 		} else if (ev.origin === this.clientId) {
 			return;
 		} else if (ev.t === 'upsert') {
-			for (const it of ev.items) {
-				const local = this.#pending.get(it.id);
-				const prev = this.items[it.id];
-				this.items[it.id] = local ? { ...it, ...local } : it;
-				if (prev && prev.content !== it.content) this.remote = { id: it.id, by: ev.by ?? 'Someone', at: Date.now() };
-			}
+			for (const it of ev.items) this.#merge(it, ev.by);
 		} else if (ev.t === 'delete') {
-			for (const id of ev.ids) delete this.items[id];
+			for (const id of ev.ids) (delete this.items[id], this.#syncs.delete(id));
 		}
 	}
 
@@ -149,6 +313,8 @@ export class ProjectStore {
 			w,
 			h,
 			content: '',
+			rev: 0,
+			hidden: false,
 			updated_at: Date.now(),
 			updated_by: null,
 			...extra
@@ -173,7 +339,8 @@ export class ProjectStore {
 
 	async flush() {
 		this.#flushTimer = null;
-		if (!this.#pending.size) return;
+		const sends = Promise.all([...this.#syncs.values()].map((s) => s.send()));
+		if (!this.#pending.size) return sends;
 		const updates = [...this.#pending].map(([id, p]) => ({ id, ...p }));
 		this.#pending.clear();
 		try {
@@ -182,6 +349,7 @@ export class ProjectStore {
 			alert(`Could not save changes: ${(e as Error).message}`);
 			this.resync();
 		}
+		await sends;
 	}
 
 	remove(ids: string[]) {
@@ -191,7 +359,7 @@ export class ProjectStore {
 			grew = false;
 			for (const it of Object.values(this.items)) if (it.parent_id && all.has(it.parent_id) && !all.has(it.id)) (all.add(it.id), (grew = true));
 		}
-		for (const id of all) delete this.items[id];
+		for (const id of all) (delete this.items[id], this.#syncs.delete(id));
 		this.#fetch('/items', { method: 'DELETE', body: JSON.stringify({ ids }) }).catch(() => this.resync());
 	}
 

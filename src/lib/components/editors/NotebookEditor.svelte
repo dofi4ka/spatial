@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy, tick } from 'svelte';
 	import type { Item } from '#lib/types.ts';
-	import type { ProjectStore } from '#lib/store.svelte.ts';
+	import type { Binding, ProjectStore } from '#lib/store.svelte.ts';
 	import { icons } from '#lib/icons.ts';
 	import { renderMarkdown } from '#lib/markdown.ts';
 	import { compactOutputs, makeCell, parseNotebook, type Cell, type Output } from '#lib/notebook.ts';
@@ -14,9 +14,10 @@
 	// svelte-ignore state_referenced_locally
 	let nb = $state(parseNotebook(item.content));
 	// svelte-ignore state_referenced_locally
-	let lastLocal = item.content;
-	let lastEdit = 0;
-	let saveTimer: ReturnType<typeof setTimeout>;
+	const sync = store.sync(item.id);
+	const binding: Binding = { read: () => JSON.stringify($state.snapshot(nb)), write: (json) => (nb = parseNotebook(json)) };
+	// svelte-ignore state_referenced_locally
+	sync.attach(binding, item.content);
 
 	const kernel = new PythonKernel();
 	/** cell id → 'queued' | 'running' */
@@ -28,35 +29,13 @@
 	// svelte-ignore state_referenced_locally
 	const readonly = store.readonly;
 
-	function save(now = false) {
-		if (readonly) return;
-		lastLocal = JSON.stringify($state.snapshot(nb));
-		lastEdit = Date.now();
-		clearTimeout(saveTimer);
-		if (now) store.update(item.id, { content: lastLocal });
-		else saveTimer = setTimeout(() => store.update(item.id, { content: lastLocal }), 400);
+	function save() {
+		if (!readonly) sync.changed();
 	}
 
 	onDestroy(() => {
-		clearTimeout(saveTimer);
 		kernel.stop();
-		if (lastLocal !== store.items[item.id]?.content) store.update(item.id, { content: lastLocal });
-	});
-
-	// remote edits replace the notebook while we're idle
-	let retry: ReturnType<typeof setTimeout>;
-	$effect(() => {
-		const r = store.remote;
-		if (!r || r.id !== item.id) return;
-		const apply = () => {
-			const c = store.items[item.id]?.content;
-			if (c === undefined || c === lastLocal) return;
-			if (Date.now() - lastEdit < 1500 || Object.keys(runState).length) return void (retry = setTimeout(apply, 800));
-			lastLocal = c;
-			nb = parseNotebook(c);
-		};
-		clearTimeout(retry);
-		apply();
+		sync.detach(binding);
 	});
 
 	const find = (id: string) => nb.cells.find((c) => c.id === id);
@@ -81,7 +60,7 @@
 		);
 		delete runState[id];
 		delete logs[id];
-		save(true);
+		save();
 	}
 
 	async function runAndAdvance(id: string) {

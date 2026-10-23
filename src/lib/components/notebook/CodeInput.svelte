@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { EditorState, Prec } from '@codemirror/state';
+	import { EditorState, Prec, Transaction } from '@codemirror/state';
 	import { EditorView, keymap, placeholder as cmPlaceholder, lineNumbers, drawSelection, highlightActiveLine } from '@codemirror/view';
 	import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 	import { bracketMatching, defaultHighlightStyle, indentOnInput, indentUnit, syntaxHighlighting } from '@codemirror/language';
@@ -72,10 +72,18 @@
 		return () => view.destroy();
 	});
 
-	// remote edits: replace the document unless the user is typing in it
+	// remote edits: replace only the changed span so the cursor stays put (and keep it out of undo)
 	$effect(() => {
 		const v = value;
-		if (view && !view.hasFocus && v !== view.state.doc.toString()) view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: v } });
+		if (!view) return;
+		const cur = view.state.doc.toString();
+		if (v === cur) return;
+		let from = 0;
+		while (from < cur.length && from < v.length && cur[from] === v[from]) from++;
+		let a = cur.length;
+		let b = v.length;
+		while (a > from && b > from && cur[a - 1] === v[b - 1]) (a--, b--);
+		view.dispatch({ changes: { from, to: a, insert: v.slice(from, b) }, annotations: Transaction.addToHistory.of(false) });
 	});
 </script>
 

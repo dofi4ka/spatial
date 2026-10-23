@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
 	import type { Item } from '#lib/types.ts';
-	import { DEFAULT_SIZE, type ProjectStore } from '#lib/store.svelte.ts';
+	import { DEFAULT_SIZE, type Binding, type ProjectStore } from '#lib/store.svelte.ts';
 	import { countNodes, emptyPage, findNode, findParent, makeNode, pageToHtml, VOID_TAGS, type PageNode } from '#lib/page.ts';
 	import { icons } from '#lib/icons.ts';
 	import { mentionToken, planExport, replacePageMentions, resolverFor } from '#lib/mentions.ts';
@@ -13,44 +13,17 @@
 
 	let { store, item, onopen }: { store: ProjectStore; item: Item; onopen?: (item: Item) => void } = $props();
 
-	let lastLocal = item.content;
-	let lastEdit = 0;
-	let saveTimer: ReturnType<typeof setTimeout>;
-
 	// svelte-ignore state_referenced_locally
 	const readonly = store.readonly;
-	const ed = new PageEditorState(
-		item.content,
-		(json) => {
-			lastLocal = json;
-			lastEdit = Date.now();
-			clearTimeout(saveTimer);
-			saveTimer = setTimeout(() => store.update(item.id, { content: json }), 350);
-		},
-		readonly
-	);
+	// svelte-ignore state_referenced_locally
+	const sync = store.sync(item.id);
+	// svelte-ignore state_referenced_locally
+	const ed = new PageEditorState(item.content, () => sync.changed(), readonly);
 	ed.selectedId = ed.root.id;
-
-	onDestroy(() => {
-		clearTimeout(saveTimer);
-		if (lastLocal !== store.items[item.id]?.content) store.update(item.id, { content: lastLocal });
-	});
-
-	// remote edits replace the tree when we're idle
-	let retry: ReturnType<typeof setTimeout>;
-	$effect(() => {
-		const r = store.remote;
-		if (!r || r.id !== item.id) return;
-		const apply = () => {
-			const c = store.items[item.id]?.content;
-			if (c === undefined || c === lastLocal) return;
-			if (Date.now() - lastEdit < 1500) return void (retry = setTimeout(apply, 800));
-			lastLocal = c;
-			ed.replace(c);
-		};
-		clearTimeout(retry);
-		apply();
-	});
+	const binding: Binding = { read: () => ed.json(), write: (json) => ed.replace(json) };
+	// svelte-ignore state_referenced_locally
+	sync.attach(binding, item.content);
+	onDestroy(() => sync.detach(binding));
 
 	let leftTab = $state<'components' | 'layers'>(readonly ? 'layers' : 'components');
 	let rightTab = $state<'inspect' | 'html'>('inspect');
