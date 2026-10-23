@@ -6,6 +6,6 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
-		sveltekit({ adapter: adapter() })
+		sveltekit({ adapter: adapter(), version: { pollInterval: 30000 } })
 	]
 });

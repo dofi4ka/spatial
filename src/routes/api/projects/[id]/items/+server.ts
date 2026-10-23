@@ -42,6 +42,8 @@ export async function POST(event) {
 export async function PATCH(event) {
 	const { user, project, origin, touch } = ctx(event);
 	const { updates } = (await event.request.json()) as { updates: ItemPatch[] };
+	// pages loaded before revisioned content writes existed; make them notice instead of losing edits
+	if (updates?.some((u) => 'content' in u)) error(409, 'Spatial was updated. Reload the page to keep editing.');
 	const out: Item[] = [];
 	for (const u of updates ?? []) {
 		const existing = getItem(u.id);

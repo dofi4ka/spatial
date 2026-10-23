@@ -95,7 +95,7 @@
 	</div>
 
 	<div
-		class="h-full w-full overflow-hidden rounded-lg border bg-white shadow-sm transition-[box-shadow,border-color,opacity] {item.type === 'canvas' ? 'border-indigo-200' : 'border-zinc-200'} {item.hidden ? 'border-dashed opacity-60' : ''}"
+		class="h-full w-full overflow-hidden rounded-lg border bg-white shadow-sm transition-[box-shadow,border-color] {item.type === 'canvas' ? 'border-indigo-200' : 'border-zinc-200'} {item.hidden ? 'border-dashed' : ''}"
 		class:ring-selected={selected}
 		class:ring-drop={dropTarget}
 	>

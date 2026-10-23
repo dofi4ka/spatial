@@ -89,9 +89,26 @@
 					current = d;
 					if (!api) return;
 					if (Object.keys(d.files).length) api.addFiles(Object.values(d.files) as never);
+					// Keep Excalidraw's own objects for elements that are up to date or being drawn,
+					// dragged, resized or typed into right now; swapping those for copies would break
+					// the gesture in progress.
+					type Ex = { id: string; version: number; versionNonce: number };
+					const st = api.getAppState();
+					const busy = new Set(
+						[st.newElement, st.resizingElement, st.editingTextElement, st.multiElement, st.editingLinearElement?.elementId]
+							.map((e) => (typeof e === 'string' ? e : e?.id))
+							.concat(st.selectedElementsAreBeingDragged ? Object.keys(st.selectedElementIds) : [])
+							.filter(Boolean) as string[]
+					);
+					const local = new Map((api.getSceneElements() as unknown as Ex[]).map((e) => [e.id, e]));
+					const elements = (d.elements as Ex[]).map((r) => {
+						const l = local.get(r.id);
+						return l && (busy.has(r.id) || l.version > r.version || (l.version === r.version && l.versionNonce === r.versionNonce)) ? l : r;
+					});
+					for (const id of busy) if (local.has(id) && !elements.some((e) => e.id === id)) elements.push(local.get(id)!);
 					// not undoable: undo should only revert our own strokes
 					api.updateScene({
-						elements: d.elements as never,
+						elements: elements as never,
 						appState: { viewBackgroundColor: d.appState.viewBackgroundColor ?? '#ffffff' } as never,
 						captureUpdate: ex.CaptureUpdateAction.NEVER
 					});

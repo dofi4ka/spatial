@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, setContext } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
+	import { page, updated } from '$app/state';
 	import type { Access, Item, Project, User } from '#lib/types.ts';
 	import { ProjectStore } from '#lib/store.svelte.ts';
 	import { icons } from '#lib/icons.ts';
@@ -27,6 +27,13 @@
 			disconnect();
 			window.removeEventListener('pagehide', flush);
 		};
+	});
+
+	// A new version was deployed: an old page would sync with an outdated protocol, so save what's
+	// pending and reload to pick up the new code.
+	$effect(() => {
+		if (!updated.current) return;
+		store.flush().finally(() => location.reload());
 	});
 
 	let canvasId = $derived.by(() => {
